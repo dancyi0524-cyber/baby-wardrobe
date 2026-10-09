@@ -325,6 +325,27 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
 .po-row{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .po-row label.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink)}
 .po-row label.chk input{width:18px;height:18px}
+.syncbtn{display:inline-flex;align-items:center;gap:7px}
+.syncbtn .sdot{width:11px;height:11px;border-radius:50%;border:2px solid var(--ol);background:var(--line);flex:none}
+.syncbtn[data-st="ok"] .sdot{background:var(--green)}
+.syncbtn[data-st="dirty"] .sdot{background:var(--yellow)}
+.syncbtn[data-st="err"] .sdot{background:var(--danger)}
+.syncbtn[data-st="paused"] .sdot{background:var(--muted)}
+.syncbtn.busy .sdot{animation:syspin .8s linear infinite;border-style:dashed}
+@keyframes syspin{to{transform:rotate(360deg)}}
+.fab{display:none}
+.acts .btn,.row .btn{min-height:40px}
+@media (max-width:560px){
+  .row{gap:8px}
+  .row .search{flex:1 1 100%}
+  #btnAdd{display:none}
+  .fab{display:grid;place-items:center;position:fixed;right:16px;bottom:20px;z-index:20;width:58px;height:58px;border-radius:50%;border:2.5px solid var(--ol);background:var(--accent);color:var(--accent-ink);font-size:32px;line-height:1;box-shadow:0 4px 0 var(--ol);padding:0}
+  .fab:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ol)}
+  #statusChips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+  #statusChips .chip,#statusChips button{flex:none}
+  .acts .btn{flex:1 1 auto}
+}
+body.batching .fab,body.pub .fab{display:none}
 </style>
 </head>
 <body>
@@ -353,6 +374,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
       <button class="btn" id="btnFilters" type="button" aria-expanded="false" aria-controls="filtersBox">篩選 ▾</button>
       <button class="btn" id="btnClear" type="button" hidden>清除全部</button>
       <button class="btn primary" id="btnAdd" type="button">＋ 新增衣服</button>
+      <button class="btn syncbtn" id="btnSyncNow" type="button" data-st="none"><span class="sdot" aria-hidden="true"></span><span class="slab">連接試算表</span></button>
       <div class="menuwrap">
         <button class="btn" id="btnMore" type="button" aria-haspopup="menu" aria-expanded="false">更多 ▾</button>
         <div class="menu" id="moreMenu" role="menu" hidden>
@@ -368,7 +390,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
           <button class="mi" id="btnExport" type="button">匯出 Excel</button>
           <button class="mi" id="btnBackup" type="button">備份／還原</button>
           <hr>
-          <button class="mi" id="btnSync" type="button">同步試算表</button>
+          <button class="mi" id="btnSync" type="button">同步設定</button>
           <button class="mi" id="btnShare" type="button">分享公開連結</button>
         </div>
       </div>
@@ -398,6 +420,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   <div class="crow"><p class="count" id="count" aria-live="polite"></p><div class="seg" role="group" aria-label="檢視方式"><button type="button" data-layout="cards" aria-pressed="true">卡片</button><button type="button" data-layout="table" aria-pressed="false">表格</button></div></div>
   <div class="soldsum" id="soldSum" hidden></div>
   <main class="grid" id="grid"></main>
+  <button class="fab" id="fab" type="button" aria-label="新增衣服">＋</button>
 </div>
 <div class="batchbar" id="batchbar" hidden></div>
 <div id="modalRoot"></div>
@@ -406,8 +429,8 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
 <script>
 (function(){
   var KEY='babyWardrobe.v2';
-  var STATUS=['預購中','已到貨','待售出','已售出'];
-  var COND=['全新未下水','洗二穿一','二手無汙損','二手有汙','借出中'];
+  var STATUS=['預購中','已到貨','待售出','借出中','已售出'];
+  var COND=['全新未下水','洗二穿一','二手無汙損','二手有汙'];
   var SHAPES={onesie:'連身衣',top:'上衣',pants:'褲子',jacket:'外套',dress:'洋裝／裙',hat:'帽子配件'};
   var PATHS={
     onesie:'M40 18 L50 18 Q60 30 70 18 L80 18 L100 34 L90 50 L82 44 L82 78 Q82 92 74 98 L70 98 L70 90 L50 90 L50 98 L46 98 Q38 92 38 78 L38 44 L30 50 L20 34 Z',
@@ -435,6 +458,9 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
       }
       var fs=i.forSale===true||(i.forSale===undefined&&(i.tags||[]).indexOf('可販售')>=0);i.tags=(i.tags||[]).filter(function(t){return t!=='可販售'});if(fs&&i.status==='已到貨')i.status='待售出';delete i.forSale;
       if(i.eta===undefined)i.eta='';if(i.buyDate===undefined)i.buyDate='';if(i.soldDate===undefined)i.soldDate='';if(i.lentTo===undefined){i.lentTo='';i.prevCond='';if((i.tags||[]).indexOf('外借')>=0){i.tags=i.tags.filter(function(t){return t!=='外借'});if(i.cond!=='借出中'){i.prevCond=i.cond;i.cond='借出中';}}}
+      if(i.prevStatus===undefined)i.prevStatus='';
+      if(i.cond==='借出中'){i.cond=i.prevCond||'二手無汙損';i.prevCond='';if(i.status==='已到貨'||i.status==='待售出'){i.prevStatus=i.status;i.status='借出中';}}
+      if(i.lentTo&&(i.status==='已到貨'||i.status==='待售出')){i.prevStatus=i.status;i.status='借出中';}
     });
     return o;
   }
@@ -464,7 +490,13 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   }
   function uid(){return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
   function soldPrice(i){var s=Number(i.sell);return s>0?s:(Number(i.buy)||0)}
-  function stCls(s){return s==='預購中'?'pre':s==='已售出'?'sold':s==='待售出'?'sale':'got'}
+  function stCls(s){return s==='預購中'?'pre':s==='已售出'?'sold':s==='待售出'?'sale':s==='借出中'?'lent':'got'}
+  function lentSync(i,oldLent){
+    var lent=String(i.lentTo||'').trim();i.lentTo=lent;
+    if(lent&&(i.status==='已到貨'||i.status==='待售出')){i.prevStatus=i.status;i.status='借出中';}
+    else if(!lent&&i.status==='借出中'&&oldLent){i.status=i.prevStatus||(Number(i.plan)>0?'待售出':'已到貨');i.prevStatus='';}
+    else if(i.status==='已售出'||i.status==='預購中'){i.lentTo='';}
+  }
 
   function placeholder(it){
     var c0=/^#[0-9a-f]{6}$/i.test(it.color||'')?it.color:'#d56f86',sh=it.shape||'top';
@@ -549,7 +581,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     return Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]||a.localeCompare(b)});
   }
   function renderTagBar(){
-    var scope=state.items.filter(function(i){return ui.status==='全部'?(i.status==='已到貨'||i.status==='待售出'):i.status===ui.status});
+    var scope=state.items.filter(function(i){return ui.status==='全部'?(i.status==='已到貨'||i.status==='待售出'||i.status==='借出中'):i.status===ui.status});
     var cnt={};allTags().forEach(function(t){cnt[t]=0});
     scope.forEach(function(i){(i.tags||[]).forEach(function(t){cnt[t]=(cnt[t]||0)+1})});
     var names=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]||a.localeCompare(b)});
@@ -626,7 +658,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     if(cur&&list.indexOf(cur)<0){sel.value='';}
   }
   function renderFilters(){
-    var counts={全部:state.items.filter(function(i){return i.status==='已到貨'||i.status==='待售出'}).length};
+    var counts={全部:state.items.filter(function(i){return i.status==='已到貨'||i.status==='待售出'||i.status==='借出中'}).length};
     STATUS.forEach(function(s){counts[s]=state.items.filter(function(i){return i.status===s}).length});
     $('statusChips').innerHTML=['全部'].concat(STATUS).map(function(s){
       return '<button type="button" class="chip" data-status="'+s+'" aria-pressed="'+(ui.status===s)+'">'+s+' '+counts[s]+'</button>';
@@ -674,7 +706,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     var spent=items.reduce(function(s,i){return s+(i.status==='預購中'?0:Number(i.buy)||0)},0);
     var pre=items.reduce(function(s,i){return s+(i.status==='預購中'?Number(i.buy)||0:0)},0);
     var income=items.reduce(function(s,i){return s+(i.status==='已售出'?soldPrice(i):0)},0);
-    var keep=items.filter(function(i){return i.status==='已到貨'||i.status==='待售出'}).length;
+    var keep=items.filter(function(i){return i.status==='已到貨'||i.status==='待售出'||i.status==='借出中'}).length;
     $('stats').innerHTML=
       '<li><b>'+keep+'</b><span>衣櫃現有件數</span></li>'+
       '<li><b>'+money(spent)+'</b><span>已付款購入</span></li>'+
@@ -692,16 +724,16 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     var gain='';
     var del=ui.pendingDel===it.id
       ?'<button type="button" class="btn sm danger" data-act="delok" data-id="'+it.id+'">確定刪除？</button><button type="button" class="btn sm" data-act="delno">取消</button>'
-      :flowBtn(it)+(it.cond==='借出中'?'<button type="button" class="btn sm" data-act="return" data-id="'+it.id+'">標記歸還</button>':'')+'<button type="button" class="btn sm" data-act="poster" data-id="'+it.id+'">販售圖</button>'+'<button type="button" class="btn sm" data-act="edit" data-id="'+it.id+'">編輯</button><button type="button" class="btn sm" data-act="del" data-id="'+it.id+'">刪除</button>';
+      :flowBtn(it)+(it.status==='借出中'?'<button type="button" class="btn sm" data-act="return" data-id="'+it.id+'">標記歸還</button>':(it.status==='已到貨'||it.status==='待售出')?'<button type="button" class="btn sm" data-act="lend" data-id="'+it.id+'">借出</button>':'')+'<button type="button" class="btn sm" data-act="poster" data-id="'+it.id+'">販售圖</button>'+'<button type="button" class="btn sm" data-act="edit" data-id="'+it.id+'">編輯</button><button type="button" class="btn sm" data-act="del" data-id="'+it.id+'">刪除</button>';
     return '<article data-id="'+it.id+'" class="card'+(it.status==='已售出'?' sold':'')+(ui.sel[it.id]?' picked':'')+'">'+
       '<div class="pic">'+pic+(ui.selMode?'<label class="selbox"><input type="checkbox" data-sel="'+it.id+'"'+(ui.sel[it.id]?' checked':'')+' aria-label="選取這件"></label>':'')+
       '<div class="src" role="group" aria-label="圖片來源"><button type="button" data-act="view" data-v="official" data-id="'+it.id+'" aria-pressed="'+(v==='official')+'">官方圖</button><button type="button" data-act="view" data-v="photo" data-id="'+it.id+'" aria-pressed="'+(v==='photo')+'">實拍圖</button></div>'+emptyTag+'</div>'+
       '<div class="body">'+
         '<div class="brand">'+esc(it.brand||'未填品牌')+'</div>'+
         '<h3 class="name">'+esc(it.name)+'</h3>'+
-        '<div class="pills"><span class="pill '+stCls(it.status)+'">'+esc(it.status)+'</span><span class="pill size">'+esc(it.size||'—')+'</span><span class="pill '+(it.cond==='借出中'?'lent':'cond')+'">'+esc(it.cond)+'</span><span class="pill">'+esc(it.cat||'未分類')+'</span>'+etaPill(it)+(it.status==='已售出'?profitPill(it):'')+'</div>'+
+        '<div class="pills"><span class="pill '+stCls(it.status)+'">'+esc(it.status)+'</span><span class="pill size">'+esc(it.size||'—')+'</span><span class="pill cond">'+esc(it.cond)+'</span><span class="pill">'+esc(it.cat||'未分類')+'</span>'+etaPill(it)+(it.status==='已售出'?profitPill(it):'')+'</div>'+
         ((it.tags&&it.tags.length)?'<div class="tags">'+it.tags.map(function(t){return '<span data-tag="'+esc(t)+'" role="button" tabindex="0" title="用這個標籤篩選">#'+esc(t)+'</span>'}).join('')+'</div>':'')+
-        (it.cond==='借出中'?'<p class="note" style="color:var(--pre);font-weight:700">借給：'+esc(it.lentTo||'（未填）')+'</p>':'')+(it.note?'<p class="note">'+esc(it.note)+'</p>':'')+
+        (it.status==='借出中'?'<p class="note" style="color:var(--pre);font-weight:700">借給：'+esc(it.lentTo||'（未填）')+'</p>':'')+(it.note?'<p class="note">'+esc(it.note)+'</p>':'')+
         '<div class="price"><span>購入 <b>'+money(it.buy)+'</b></span>'+(it.plan>0&&it.status!=='已售出'?'<span>標價 <b>'+money(it.plan)+'</b></span>':'')+(it.buyDate?'<span>購入日 <b>'+esc(it.buyDate.replace(/-/g,'/'))+'</b></span>':'')+(it.status==='已售出'&&it.soldDate?'<span>售出日 <b>'+esc(it.soldDate.replace(/-/g,'/'))+'</b></span>':'')+(it.status==='已售出'?'<span>售出 <b>'+money(soldPrice(it))+'</b></span>'+(Number(it.sell)?'':'<span>（原價）</span>')+gain:'')+'</div>'+
         '<div class="acts">'+del+'</div>'+
       '</div></article>';
@@ -746,7 +778,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
       '<label class="f">購入價（NT$）<input type="number" id="fmBuy" min="0" inputmode="numeric" value="'+esc(d.buy)+'"></label>'+
       '<label class="f">售出價（NT$，已售出才需要；留空代表原價出售）<input type="number" id="fmSell" min="0" inputmode="numeric" value="'+esc(d.sell||'')+'"></label>'+
       '<label class="f">預計售價（NT$，販售包用）<input type="number" id="fmPlan" min="0" inputmode="numeric" value="'+esc(d.plan||'')+'"></label>'+'<label class="f">預計到貨日（預購用）<input type="date" id="fmEta" value="'+esc(d.eta||'')+'"></label>'+'<label class="f">購入日期<input type="date" id="fmBuyDate" value="'+esc(d.buyDate||'')+'"></label>'+'<label class="f">售出日期（標為已售出時自動帶入今天）<input type="date" id="fmSoldDate" value="'+esc(d.soldDate||'')+'"></label>'+'<label class="f">到貨狀況<select id="fmStatus">'+optList(STATUS,d.status)+'</select></label>'+
-      '<label class="f">衣況<select id="fmCond">'+optList(COND,d.cond)+'</select></label>'+'<label class="f full">借給誰（衣況選「借出中」時填寫）<input type="text" id="fmLentTo" value="'+esc(d.lentTo||'')+'" placeholder="例：小美、鄰居媽媽"></label>'+
+      '<label class="f">衣況<select id="fmCond">'+optList(COND,d.cond)+'</select></label>'+'<label class="f full">借給誰（填寫後，到貨狀況會自動變成「借出中」；清空即歸還）<input type="text" id="fmLentTo" value="'+esc(d.lentTo||'')+'" placeholder="例：小美、鄰居媽媽"></label>'+
       '<label class="f full">標籤（用逗號分隔）<input type="text" id="fmTags" value="'+esc((d.tags||[]).join('，'))+'" placeholder="例：新生兒，有機棉，禮物"></label>'+'<div class="po-presets" id="fmTagSug" style="grid-column:1/-1;margin-top:-6px"></div>'+
       imgField('official','官方圖')+imgField('photo','實拍圖')+
       '<label class="f">沒有圖片時的示意樣式<select id="fmShape">'+shapeOpts+'</select></label>'+
@@ -766,8 +798,12 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
         cat:$('fmCat').value,tags:$('fmTags').value.split(/[,，、]/).map(function(t){return t.trim().replace(/^#/,'')}).filter(Boolean),
         buy:Number($('fmBuy').value)||0,sell:Number($('fmSell').value)||0,status:$('fmStatus').value,cond:$('fmCond').value,
         official:($('fmOfficialUrl').value.trim()||formImgs.official),photo:($('fmPhotoUrl').value.trim()||formImgs.photo),
-        lentTo:($('fmCond').value==='借出中'?$('fmLentTo').value.trim():''),prevCond:($('fmCond').value==='借出中'?((it&&it.cond!=='借出中')?it.cond:((it&&it.prevCond)||'')):''),buyDate:$('fmBuyDate').value,soldDate:($('fmSoldDate').value||($('fmStatus').value==='已售出'?todayStr():'')),plan:Number($('fmPlan').value)||0,eta:$('fmEta').value,note:$('fmNote').value.trim(),shape:$('fmShape').value,color:$('fmColor').value
+        lentTo:$('fmLentTo').value.trim(),prevCond:'',prevStatus:(it&&it.prevStatus)||'',buyDate:$('fmBuyDate').value,soldDate:($('fmSoldDate').value||($('fmStatus').value==='已售出'?todayStr():'')),plan:Number($('fmPlan').value)||0,eta:$('fmEta').value,note:$('fmNote').value.trim(),shape:$('fmShape').value,color:$('fmColor').value
       };
+      var oldLent=it?String(it.lentTo||'').trim():'';
+      if(it&&it.status!=='借出中'&&rec.status==='借出中'){rec.prevStatus=it.status;}
+      else if(it&&it.status==='借出中'&&rec.status!=='借出中'&&rec.lentTo&&rec.lentTo===oldLent&&rec.status!=='已售出'&&rec.status!=='預購中'){rec.lentTo='';}
+      lentSync(rec,oldLent);
       if(it){state.items[state.items.indexOf(it)]=rec}else{state.items.push(rec)}
       save();closeModal();renderAll();toast(it?'已更新':'已新增');
     };
@@ -906,7 +942,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     tags=(tags||[]).map(function(t){return String(t).trim().replace(/^#/,'')}).filter(Boolean);
     return {id:uid(),brand:String(o.brand||'').trim(),name:String(o.name||'').trim()||'未命名',size:String(o.size==null?'':o.size).trim(),
       cat:String(o.cat||'').trim(),tags:tags,buy:Number(String(o.buy||'').replace(/[^\d.]/g,''))||0,sell:Number(String(o.sell||'').replace(/[^\d.]/g,''))||0,
-      buyDate:/^\d{4}-\d{2}-\d{2}$/.test(String(o.buyDate||'').trim())?String(o.buyDate).trim():'',soldDate:/^\d{4}-\d{2}-\d{2}$/.test(String(o.soldDate||'').trim())?String(o.soldDate).trim():'',lentTo:String(o.lentTo||'').trim(),prevCond:'',srcId:String(o.id||'').trim(),plan:Number(String(o.plan||'').replace(/[^\d.]/g,''))||0,eta:/^\d{4}-\d{2}-\d{2}$/.test(String(o.eta||'').trim())?String(o.eta).trim():'',status:(function(){var s=STATUS.indexOf(o.status)>=0?o.status:'已到貨';return (s==='已到貨'&&(o.forSale===true||/^(是|y|yes|true|1|可販售)$/i.test(String(o.forSale||'').trim())))?'待售出':s})(),cond:COND.indexOf(o.cond)>=0?o.cond:'全新未下水',
+      buyDate:/^\d{4}-\d{2}-\d{2}$/.test(String(o.buyDate||'').trim())?String(o.buyDate).trim():'',soldDate:/^\d{4}-\d{2}-\d{2}$/.test(String(o.soldDate||'').trim())?String(o.soldDate).trim():'',lentTo:String(o.lentTo||'').trim(),prevCond:'',srcId:String(o.id||'').trim(),plan:Number(String(o.plan||'').replace(/[^\d.]/g,''))||0,eta:/^\d{4}-\d{2}-\d{2}$/.test(String(o.eta||'').trim())?String(o.eta).trim():'',status:(function(){var s=STATUS.indexOf(o.status)>=0?o.status:'已到貨';s=(s==='已到貨'&&(o.forSale===true||/^(是|y|yes|true|1|可販售)$/i.test(String(o.forSale||'').trim())))?'待售出':s;if((s==='已到貨'||s==='待售出')&&(o.cond==='借出中'||String(o.lentTo||'').trim()))s='借出中';return s})(),cond:COND.indexOf(o.cond)>=0?o.cond:'全新未下水',
       official:String(o.official||'').trim(),photo:String(o.photo||'').trim(),note:String(o.note||'').trim(),
       shape:SHAPES[o.shape]?o.shape:'top',color:/^#[0-9a-f]{6}$/i.test(o.color||'')?o.color:'#2a7f90'};
   }
@@ -942,18 +978,22 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   }
   function applySet(ex,n,full){
     var keys=(full&&n._cols)?n._cols.slice():n._set||['brand','size','cat','tags','buy','sell','status','cond','official','photo','note','plan','eta','buyDate','soldDate','lentTo'];
+    var oS=ex.status,oL=String(ex.lentTo||'').trim();
     keys.forEach(function(k){
       if(k==='forSale'){if(n.status==='待售出'&&keys.indexOf('status')<0)ex.status='待售出';return;}
       if(k==='id'||(k==='name'&&!full))return;
       if(full&&(k==='official'||k==='photo')&&!n[k]&&String(ex[k]||'').indexOf('data:')===0)return;
       if(k==='status'&&ex.status==='已售出'&&n.status!=='已售出'&&keys.indexOf('soldDate')<0)ex.soldDate='';
       if(k==='cond'){
-        if(n.cond==='借出中'){if(ex.cond!=='借出中')ex.prevCond=ex.cond;}
-        else{ex.lentTo='';ex.prevCond='';}
+        if(n.cond==='借出中'){if(ex.status==='已到貨'||ex.status==='待售出'){ex.prevStatus=ex.status;ex.status='借出中';}return;}
         ex.cond=n.cond;return;
       }
       ex[k]=n[k];
     });
+    var nL=String(ex.lentTo||'').trim();
+    if(ex.status==='借出中'&&oS!=='借出中'&&oS&&!ex.prevStatus)ex.prevStatus=oS;
+    if(nL!==oL)lentSync(ex,oL);
+    else if(oS==='借出中'&&ex.status!=='借出中'&&nL&&ex.status!=='已售出'&&ex.status!=='預購中')ex.lentTo='';
   }  var DIFF_LABEL={status:'狀態',cond:'衣況',plan:'預計售價',buy:'購入價',sell:'售出價',size:'尺寸',cat:'分類',official:'官方圖',photo:'實拍圖',brand:'品牌',note:'備註',tags:'標籤',eta:'預計到貨日',buyDate:'購入日期',soldDate:'售出日期',lentTo:'借給誰'};
   function diffPreview(parsed){
     var pool=state.items.slice(),upd=0,add=0,changed=0,lines=[];
@@ -1222,7 +1262,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   function actsHtml(it){
     return ui.pendingDel===it.id
       ?'<button type="button" class="btn sm danger" data-act="delok" data-id="'+it.id+'">確定刪除？</button><button type="button" class="btn sm" data-act="delno">取消</button>'
-      :flowBtn(it)+(it.cond==='借出中'?'<button type="button" class="btn sm" data-act="return" data-id="'+it.id+'">標記歸還</button>':'')+'<button type="button" class="btn sm" data-act="poster" data-id="'+it.id+'">販售圖</button>'+'<button type="button" class="btn sm" data-act="edit" data-id="'+it.id+'">編輯</button><button type="button" class="btn sm" data-act="del" data-id="'+it.id+'">刪除</button>';
+      :flowBtn(it)+(it.status==='借出中'?'<button type="button" class="btn sm" data-act="return" data-id="'+it.id+'">標記歸還</button>':(it.status==='已到貨'||it.status==='待售出')?'<button type="button" class="btn sm" data-act="lend" data-id="'+it.id+'">借出</button>':'')+'<button type="button" class="btn sm" data-act="poster" data-id="'+it.id+'">販售圖</button>'+'<button type="button" class="btn sm" data-act="edit" data-id="'+it.id+'">編輯</button><button type="button" class="btn sm" data-act="del" data-id="'+it.id+'">刪除</button>';
   }
   function tableHtml(list){
     var head='<tr>'+(ui.selMode?'<th></th>':'')+'<th></th><th>品牌／名稱</th><th>尺寸</th><th>分類</th><th>狀態</th><th>衣況</th><th class="num">購入</th><th class="num">售價</th><th>操作</th></tr>';
@@ -1236,11 +1276,11 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
         (ui.selMode?'<td><input type="checkbox" data-sel="'+it.id+'"'+(ui.sel[it.id]?' checked':'')+' aria-label="選取這件" style="width:20px;height:20px"></td>':'')+
         '<td><div class="pic thumbc">'+th+'</div></td>'+
         '<td><div class="brand">'+esc(it.brand||'未填品牌')+'</div><span class="name tn">'+esc(it.name)+'</span>'+
-          (it.cond==='借出中'?'<div class="note" style="color:var(--pre);font-weight:700">借給：'+esc(it.lentTo||'（未填）')+'</div>':'')+
+          (it.status==='借出中'?'<div class="note" style="color:var(--pre);font-weight:700">借給：'+esc(it.lentTo||'（未填）')+'</div>':'')+
           (etaPill(it)?'<div>'+etaPill(it)+'</div>':'')+'</td>'+
         '<td>'+esc(it.size||'—')+'</td><td>'+esc(it.cat||'未分類')+'</td>'+
         '<td><span class="pill '+stCls(it.status)+'">'+esc(it.status)+'</span></td>'+
-        '<td><span class="pill '+(it.cond==='借出中'?'lent':'cond')+'">'+esc(it.cond)+'</span></td>'+
+        '<td><span class="pill cond">'+esc(it.cond)+'</span></td>'+
         '<td class="num">'+money(it.buy)+'</td><td class="num">'+price+'</td>'+
         '<td class="tb"><div class="acts">'+actsHtml(it)+'</div></td></tr>';
     }).join('');
@@ -1280,7 +1320,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   function poNew(it){
     var c=poCfg();
     return {src:it.photo?'photo':it.official?'official':'ph',img:null,upload:'',zoom:1,ox:0,oy:0,b:0,c:0,s:0,w:0,ratio:c.ratio,tpl:c.tpl,theme:c.theme,
-      brand:it.brand||'',name:it.name||'',cond:it.cond==='借出中'?(it.prevCond||'二手無汙損'):it.cond,size:it.size||'',price:it.plan>0?it.plan:(Number(it.buy)||0),
+      brand:it.brand||'',name:it.name||'',cond:it.cond==='借出中'?(it.prevCond||'二手無汙損'):it.cond,/*cond 已不含借出中，保留相容*/size:it.size||'',price:it.plan>0?it.plan:(Number(it.buy)||0),
       showCond:c.showCond,showSize:c.showSize,tainted:false,dw:0,dh:0,pw:0,ph:0};
   }
   function poWrap(c,text,maxW,maxLines){
@@ -1534,14 +1574,48 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   var SYNC_KEY='babyWardrobe.sync',syncTimer=null,lastPull=0,noSync=0;
   function syncCfg(){
     var d={url:'',token:'',mode:'off',drive:false,hash:'',dirty:false,conflict:false,last:0,err:''};
-    try{var o=JSON.parse(localStorage.getItem(SYNC_KEY)||'{}');d=Object.assign(d,o);if(o.auto&&!o.mode)d.mode='up';}catch(e){}
+    try{var o=JSON.parse(localStorage.getItem(SYNC_KEY)||'{}');d=Object.assign(d,o);}catch(e){}
+    d.mode=d.url?(d.paused?'off':'both'):'off';
     return d;
   }
   function syncSet(c){try{localStorage.setItem(SYNC_KEY,JSON.stringify(c))}catch(e){}}
   function updateSyncBtn(){
-    var b=$('btnSync');if(!b)return;var c=syncCfg();
-    b.textContent='同步試算表'+(c.url&&c.mode!=='off'?(c.mode==='both'?' ↕':' ↑')+(c.conflict||c.err?' ⚠':(c.dirty?' ◌':' ●')):'');
-    b.title=c.url&&c.mode!=='off'?(c.mode==='up'?'只上傳模式：不會讀取試算表的修改。請開啟視窗改成「雙向」':c.conflict?'試算表在別處被修改了，請開啟視窗處理':c.err?c.err:(c.dirty?'有修改尚未上傳':'已同步'+(c.lastCheck?'；上次檢查 '+new Date(c.lastCheck).toLocaleTimeString('zh-TW')+'：'+(c.lastResult||''):''))):'';
+    var b=$('btnSync');var c=syncCfg();
+    var st=!c.url?'none':c.paused?'paused':(c.conflict||c.err)?'err':c.dirty?'dirty':'ok';
+    var tip=!c.url?'尚未連接 Google 試算表，按一下開始設定':st==='paused'?'已暫停自動同步（按一下仍可手動同步）':c.conflict?'試算表在別處被修改了，按一下選擇保留哪一邊':c.err?c.err+'（按一下重試）':c.dirty?'有修改尚未上傳，按一下立即同步':'已同步'+(c.lastCheck?'；上次檢查 '+new Date(c.lastCheck).toLocaleTimeString('zh-TW')+'：'+(c.lastResult||''):'')+'，按一下重新同步';
+    if(b){b.textContent='同步設定'+(c.url?(st==='ok'?' ●':st==='dirty'?' ◌':st==='err'?' ⚠':''):'');b.title=tip;}
+    var n=$('btnSyncNow');if(n){n.dataset.st=st;n.title=tip;n.setAttribute('aria-label',tip);n.querySelector('.slab').textContent={none:'連接試算表',paused:'同步（暫停）',err:'需處理',dirty:'待同步',ok:'已同步'}[st];}
+  }
+  var syncBusy=false;
+  function syncFail(e){syncBusy=false;var n=$('btnSyncNow');if(n)n.classList.remove('busy');if(e&&e.conflict)syncChoose(false);else toast('同步失敗：'+(syncCfg().err||'請檢查網路'));}
+  function syncDone(msg){syncBusy=false;var n=$('btnSyncNow');if(n)n.classList.remove('busy');if(msg)toast(msg);}
+  function syncChoose(first){
+    openModal(first?'第一次連線：要以哪一邊為準？':'兩邊都有修改，要保留哪一邊？',
+      '<p class="hint" style="grid-column:1/-1;margin:0">'+(first?'試算表和這個網頁都已經有資料。':'試算表在別處被修改了，網頁也有還沒上傳的修改。')+'選擇後另一邊會被取代（選錯了可以按「復原」）。</p>',
+      '<button class="btn" type="button" id="scX">取消</button><button class="btn primary" type="button" id="scSheet">以試算表為準</button><button class="btn danger" type="button" id="scWeb">以網頁為準（覆蓋試算表）</button>');
+    $('scX').onclick=closeModal;
+    $('scSheet').onclick=function(){closeModal();snap();syncPull(false).then(function(){undoToast('已用試算表的內容更新')},syncFail)};
+    $('scWeb').onclick=function(){closeModal();syncUpload(true).then(function(){toast('已用網頁的內容覆蓋試算表')},syncFail)};
+  }
+  /* 一個按鈕完成同步：有未上傳修改就上傳，否則讀取試算表最新內容；兩邊都改過時才問你保留哪邊 */
+  function syncNow(){
+    var c=syncCfg();
+    if(!c.url){openSync();return;}
+    if(syncBusy)return;
+    syncBusy=true;var n=$('btnSyncNow');if(n)n.classList.add('busy');
+    if(c.dirty){syncUpload().then(function(){syncDone('已同步到試算表 ✓')},syncFail);return;}
+    var go=function(){syncPull(false).then(function(r){
+      if(r&&r.empty&&state.items.length){return syncUpload().then(function(){syncDone('試算表是空的，已把網頁的資料上傳')});}
+      syncDone(r&&r.changed?'已從試算表更新 ✓':'已是最新 ✓');
+    }).catch(syncFail)};
+    if(!c.hash&&state.items.length){
+      fetch(c.url+(c.url.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(c.token)+'&_='+Date.now()).then(function(r){return r.json()}).then(function(j){
+        if(!j||!j.ok)throw new Error(syncErr(j));
+        if(j.rows&&j.rows.length>1){syncBusy=false;if(n)n.classList.remove('busy');syncChoose(true);}else go();
+      }).catch(function(e){var c2=syncCfg();c2.err=(e&&e.message==='密碼不符')?'密碼不符':'連線失敗，請確認網址與密碼';syncSet(c2);updateSyncBtn();syncFail(e);});
+      return;
+    }
+    go();
   }
   var SYNC_COLS=['編號','品牌','名稱','尺寸','分類','標籤','購入價','預計售價','到貨狀況','衣況','備註','售出價','購入日期','售出日期','預計到貨日','借給誰','官方圖','實拍圖'];
   function syncRows(){
@@ -1576,7 +1650,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     c.dirty=true;syncSet(c);updateSyncBtn();
     clearTimeout(syncTimer);
     syncTimer=setTimeout(function(){
-      syncUpload().then(function(){},function(e){toast(e&&e.conflict?'試算表在別處被修改了，請到「同步試算表」選擇如何處理':'同步到試算表失敗：'+syncCfg().err)});
+      syncUpload().then(function(){},function(e){toast(e&&e.conflict?'試算表在別處被修改了，請按上方「同步」選擇保留哪一邊':'同步到試算表失敗：'+syncCfg().err)});
     },2500);
   }
   function rowsToText(rows){
@@ -1652,7 +1726,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   }
   function startupSync(quiet){
     var c=syncCfg();if(!c.url||c.mode!=='both'||c.conflict)return;
-    if(c.dirty){syncUpload().then(function(){},function(e){if(!quiet||(e&&e.conflict))toast(e&&e.conflict?'試算表在別處被修改了，請到「同步試算表」選擇如何處理':'同步到試算表失敗：'+syncCfg().err)});return;}
+    if(c.dirty){syncUpload().then(function(){},function(e){if(!quiet||(e&&e.conflict))toast(e&&e.conflict?'試算表在別處被修改了，請按上方「同步」選擇保留哪一邊':'同步到試算表失敗：'+syncCfg().err)});return;}
     syncPull(true).then(function(r){
       if(r&&r.changed)toast('已從試算表更新（新增 '+r.add+'、移除 '+r.del+'）');
     },function(){if(!quiet)toast('讀取試算表失敗，先顯示網頁內的資料')});
@@ -1771,7 +1845,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     "const SHEET_ID = '請貼上你的試算表ID';",
     "const SHEET = '請改成你的工作表名稱';",
     "const FOLDER_ID = '';  // 照片資料夾 ID；留空會自動建立「寶寶衣櫃照片」資料夾（照片維持私人，不會公開）",
-    "const VERSION = 'public-1';  // 版本標記，網頁用來確認你部署的是新版",
+    "const VERSION = 'public-2';  // 版本標記，網頁用來確認你部署的是新版",
     "function out(o){return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);}",
     "function getSheet(create){const ss = SpreadsheetApp.openById(SHEET_ID); return ss.getSheetByName(SHEET) || (create ? ss.insertSheet(SHEET) : null);}",
     "function readAll(sh){return sh ? sh.getDataRange().getValues() : [];}",
@@ -1783,9 +1857,10 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     "  const res = [];",
     "  rows.slice(1).forEach(function(r){",
     "    const st = String(r[iT] || '');",
-    "    if (st !== '已到貨' && st !== '待售出') return;",
+    "    const lent = (st === '借出中' || String(r[iC] || '') === '借出中');",
+    "    if (st !== '已到貨' && st !== '待售出' && !lent) return;",
     "    const plan = Number(String(r[iP] || '').replace(/[^\\d.]/g, '')) || 0;",
-    "    res.push({brand:String(r[iB] || ''), size:String(r[iS] || ''), cond:String(r[iC] || ''), plan:(st === '待售出' ? plan : 0), official:String(r[iO] || ''), photo:String(r[iF] || '')});",
+    "    res.push({brand:String(r[iB] || ''), size:String(r[iS] || ''), cond:(String(r[iC] || '') === '借出中' ? '' : String(r[iC] || '')), lent:lent, plan:(st === '待售出' ? plan : 0), official:String(r[iO] || ''), photo:String(r[iF] || '')});",
     "  });",
     "  return res;",
     "}",
@@ -1857,38 +1932,40 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     var c=syncCfg(),pulled=null;
     var last=c.last?dateText(c.last)+' '+('0'+new Date(c.last).getHours()).slice(-2)+':'+('0'+new Date(c.last).getMinutes()).slice(-2):'尚未同步';
     openModal('同步 Google 試算表',
-      '<p class="hint" style="grid-column:1/-1;margin:0">把你的 Google 試算表當作主檔。選「雙向」時，開啟網頁或切回網頁會自動讀取試算表的最新內容，在網頁修改後也會自動寫回試算表。你可以直接在試算表（或手機的 Google 試算表 App）編輯，網頁會跟著更新。</p>'+
+      '<p class="hint" style="grid-column:1/-1;margin:0">'+(c.url?'<b>不用再調整任何設定：</b>在網頁修改會自動寫進試算表；在試算表修改，開啟或切回網頁時會自動更新。想馬上同步，按下面的大按鈕即可。':'第一次只要填一次網址和密碼（或貼上設定連結），之後都是自動同步。')+'</p>'+
+      (c.url?'<button class="btn primary" type="button" id="syGo" style="grid-column:1/-1;padding:12px;font-size:16px">🔄 立即同步</button>':'')+
       '<details style="grid-column:1/-1"'+(c.url?'':' open')+'><summary style="cursor:pointer;font-weight:700">第一次設定（約 10 分鐘，只做一次）</summary>'+
       '<ol style="margin:8px 0 0;padding-left:20px;font-size:13px;line-height:1.8">'+
       '<li>到 <b>script.google.com</b> 按「新專案」（或在試算表選「擴充功能」→「Apps Script」），用你的 Google 帳號登入。</li>'+
       '<li>把預設程式碼全部刪掉，貼上下方程式碼。<b>把第一行的密碼改成你自己的</b>，按存檔。</li>'+
       '<li>右上角「部署」→「新增部署作業」→ 類型選「網頁應用程式」→ 執行身分選「我」，存取權選「所有人」→「部署」，依畫面授權。<b>之後若更新程式碼，要選「管理部署作業」→ 編輯 → 版本選「新版本」。</b></li>'+
-      '<li>複製「網頁應用程式網址」（結尾是 /exec），貼到下方欄位，密碼填同一個，按「儲存設定」再按「測試連線」。</li>'+
-      '<li>第一次請先按「立即讀取」，把試算表現有的內容讀進網頁（因為試算表已經有資料）；之後再開啟「雙向」。如果要用網頁覆蓋試算表，才按「用網頁覆蓋試算表」。</li></ol>'+
+      '<li>複製「網頁應用程式網址」（結尾是 /exec），貼到下方欄位，密碼填同一個，按「連線並同步」。第一次若網頁和試算表都有資料，會問你以哪一邊為準。</li></ol>'+
       '<textarea id="syGas" rows="8" readonly style="margin-top:8px;width:100%;font-family:monospace;font-size:11px" aria-label="Apps Script 程式碼">'+esc(GAS_CODE)+'</textarea>'+
       '<button class="btn sm" type="button" id="syCopy" style="margin-top:6px">複製程式碼</button></details>'+
       '<label class="f full">網頁應用程式網址<input type="url" id="syUrl" value="'+esc(c.url)+'" placeholder="https://script.google.com/macros/s/…/exec"></label>'+
       '<label class="f">密碼<input type="text" id="syToken" value="'+esc(c.token)+'" autocomplete="off"></label>'+
-      '<label class="f">同步方式<select id="syMode"><option value="off"'+(c.mode==='off'?' selected':'')+'>關閉（手動）</option><option value="up"'+(c.mode==='up'?' selected':'')+'>只上傳：網頁修改後寫入試算表</option><option value="both"'+(c.mode==='both'?' selected':'')+'>雙向：以試算表為主檔</option></select></label>'+
+      '<label class="f" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="syPause" style="width:auto"'+(c.paused?' checked':'')+'><span style="color:var(--ink)">暫停自動同步（只在按「同步」時才同步）</span></label>'+
       '<ul class="preview" id="syDiff" hidden></ul>'+'<label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="syDrive" style="width:auto"'+(c.drive?' checked':'')+'><span style="color:var(--ink)">新上傳的照片自動存到 Google 雲端硬碟，並把連結寫進試算表（需先更新 Apps Script 並重新授權）</span></label>'+'<label class="f full">貼上設定連結（在電腦產生的那一條，可以直接貼這裡套用）<input type="text" id="syPaste" placeholder="https://…#cfg=…"></label>'+'<div id="syLinkWrap" hidden style="grid-column:1/-1"><textarea id="syLinkBox" rows="3" readonly style="width:100%;font-size:11px" aria-label="手機設定連結"></textarea><button class="btn sm" type="button" id="syLinkCopy" style="margin-top:6px">複製連結</button></div>'+'<p class="hint" id="syInfo" style="grid-column:1/-1;margin:0" aria-live="polite">上次同步：'+last+(c.lastCheck?'；上次檢查試算表：'+new Date(c.lastCheck).toLocaleTimeString('zh-TW')+'（'+esc(c.lastResult||'')+'）':'')+(c.err?'；'+esc(c.err):'')+'</p>'+
-      (c.mode==='up'?'<p class="po-note" style="grid-column:1/-1">目前同步方式是「只上傳」：網頁的修改會寫進試算表，但在試算表改的內容<b>不會</b>回到網頁。要雙向同步，請把上面的「同步方式」改成「雙向：以試算表為主檔」，再按「儲存設定」。</p>':'')+(c.conflict?'<p class="po-note" style="grid-column:1/-1">試算表在別處被修改過，網頁的修改還沒上傳。請選擇：按「立即讀取」改用試算表的內容（網頁未上傳的修改會被取代），或按「用網頁覆蓋試算表」。</p>':'')+
-      '<div class="po-row"><button class="btn sm" type="button" id="sySave">儲存設定</button><button class="btn sm" type="button" id="syTest">測試連線</button><button class="btn sm primary" type="button" id="syNow">立即上傳</button><button class="btn sm" type="button" id="syPull">立即讀取…</button><button class="btn sm" type="button" id="syMig">把瀏覽器內的照片搬到雲端硬碟</button><button class="btn sm" type="button" id="syDriveTest">測試雲端硬碟上傳</button><button class="btn sm" type="button" id="syLink">產生手機設定連結</button>'+(c.conflict?'<button class="btn sm danger" type="button" id="syForce">用網頁覆蓋試算表</button>':'')+'</div>'+
-      '<p class="hint" style="grid-column:1/-1;margin:0">提醒：雙向模式以「編號」欄對應每件衣服，請不要刪除或更改試算表的編號欄；新增衣服時編號可以留空，網頁會自動補上。試算表中被刪除的列，網頁也會移除。照片不會寫進試算表（只有圖片檔案路徑）。此功能只能在桌面的 index.html 或自己架的網站使用，預覽頁不行。</p>',
+      (c.conflict?'<p class="po-note" style="grid-column:1/-1">試算表在別處被修改過，網頁的修改還沒上傳。按上方「立即同步」，再選擇保留哪一邊。</p>':'')+
+      '<div class="po-row"><button class="btn sm primary" type="button" id="sySave">'+(c.url?'儲存設定':'連線並同步')+'</button><button class="btn sm" type="button" id="syLink">產生手機設定連結</button></div>'+
+      '<details style="grid-column:1/-1"><summary style="cursor:pointer;font-weight:700">進階工具（一般用不到）</summary><div class="po-row" style="margin-top:8px"><button class="btn sm" type="button" id="syTest">測試連線</button><button class="btn sm" type="button" id="syNow">只上傳（網頁→試算表）</button><button class="btn sm" type="button" id="syPull">只讀取（試算表→網頁）…</button><button class="btn sm" type="button" id="syMig">把瀏覽器內的照片搬到雲端硬碟</button><button class="btn sm" type="button" id="syDriveTest">測試雲端硬碟上傳</button>'+(c.conflict?'<button class="btn sm danger" type="button" id="syForce">用網頁覆蓋試算表</button>':'')+'</div></details>'+
+      '<p class="hint" style="grid-column:1/-1;margin:0">小提醒：請不要刪除或更改試算表的「編號」欄；新增衣服時編號可以留空，網頁會自動補上。試算表中刪除的列，網頁也會移除。照片只存檔案連結，不會寫進試算表。同步功能只能在桌面的 index.html 或自己架的網站使用，預覽頁不行。</p>',
       '<button class="btn primary" type="button" id="syDone">完成</button>');
     $('syDone').onclick=closeModal;
-    $('syPaste').oninput=function(){var o=applyCfgText(this.value);if(o){$('syUrl').value=o.u;$('syToken').value=o.t||'';$('syMode').value=o.m||'both';$('syDrive').checked=!!o.d;updateSyncBtn();info('已套用設定連結。接著按「立即讀取…」把試算表的資料讀進來。');}};
+    $('syPaste').oninput=function(){var o=applyCfgText(this.value);if(o){$('syUrl').value=o.u;$('syToken').value=o.t||'';$('syDrive').checked=!!o.d;updateSyncBtn();info('已套用設定連結，按下面的「連線並同步」就完成了。');}};
     $('syLink').onclick=function(){var x=cfgFromForm();syncSet(x);if(!x.url){info('請先貼上網頁應用程式網址並儲存設定');return;}if(location.protocol==='file:'){info('這個功能要在放到網路上的網址（例如 GitHub Pages）裡使用，直接開檔案的連結手機打不開。');return;}$('syLinkBox').value=makeCfgLink();$('syLinkWrap').hidden=false;info('把這條連結傳到手機（例如用 LINE 傳給自己），用手機打開並「加到主畫面」，之後每次開啟都會自動帶入網址與密碼。連結裡含有你的密碼，請不要分享給別人。');};
     $('syLinkCopy').onclick=function(){var ta=$('syLinkBox');ta.select();if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(ta.value).then(function(){toast('已複製連結')},function(){toast('請手動複製已選取的文字')});else toast('請手動複製已選取的文字');};
     $('syDriveTest').onclick=function(){var x=cfgFromForm();syncSet(x);driveTest(info);};
     $('syMig').onclick=function(){var x=cfgFromForm();syncSet(x);if(!x.url||!x.drive){info('請先勾選「新上傳的照片自動存到 Google 雲端硬碟」並儲存設定');return;}migratePhotos(info);};
     function info(t){$('syInfo').textContent=t}
-    function cfgFromForm(){var x=syncCfg();x.url=$('syUrl').value.trim();x.token=$('syToken').value.trim();x.mode=$('syMode').value;x.drive=$('syDrive').checked;return x}
+    function cfgFromForm(){var x=syncCfg();x.url=$('syUrl').value.trim();x.token=$('syToken').value.trim();x.paused=$('syPause').checked;x.drive=$('syDrive').checked;return x}
     $('syCopy').onclick=function(){
       var ta=$('syGas');ta.select();
       if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(GAS_CODE).then(function(){toast('已複製程式碼')},function(){toast('請手動複製已選取的文字')});
       else toast('請手動複製已選取的文字');
     };
-    $('sySave').onclick=function(){syncSet(cfgFromForm());updateSyncBtn();info('設定已儲存');if($('syMode').value!=='off'&&$('syUrl').value.trim()&&syncCfg().dirty)scheduleSync();};
+    $('sySave').onclick=function(){var x=cfgFromForm();syncSet(x);updateSyncBtn();if(!x.url){info('請先貼上網頁應用程式網址');return;}closeModal();syncNow();};
+    if($('syGo'))$('syGo').onclick=function(){syncSet(cfgFromForm());closeModal();syncNow();};
     $('syTest').onclick=function(){
       var x=cfgFromForm();syncSet(x);
       if(!x.url){info('請先貼上網頁應用程式網址');return;}
@@ -2105,7 +2182,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     else if(/^https:\/\/(drive\.google\.com|lh3\.googleusercontent\.com)\//.test(url)&&driveId(url))img='<img src="'+BLANKGIF+'" data-pubdrive="'+esc(driveId(url))+'" alt="">';
     else img='<img src="'+esc(url)+'" alt="" loading="lazy">';
     return '<article class="card"><div class="pic">'+img+'</div><div class="body"><div class="brand">'+esc(it.brand||'未標示品牌')+'</div>'+
-      '<div class="pills"><span class="pill size">'+esc(it.size||'—')+'</span>'+(it.cond?'<span class="pill '+(it.cond==='借出中'?'lent':'cond')+'">'+esc(it.cond)+'</span>':'')+'</div>'+
+      '<div class="pills"><span class="pill size">'+esc(it.size||'—')+'</span>'+(it.lent?'<span class="pill lent">借出中</span>':'')+(it.cond&&it.cond!=='借出中'?'<span class="pill cond">'+esc(it.cond)+'</span>':'')+'</div>'+
       (it.plan>0?'<div class="price"><span>售價 <b>'+money(it.plan)+'</b></span></div>':'')+'</div></article>';
   }
   function pubFill(){
@@ -2171,7 +2248,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
       '<p class="hint" style="grid-column:1/-1;margin:0">把這條連結傳給別人，對方打開只會看到：<b>現有件數、品牌、尺寸、照片、衣況、預計售價</b>。購入價、已付款、預購待付、售出收入、名稱、標籤、備註、借給誰、已售出與預購中的衣服都看不到。對方按「編輯」並輸入密碼，才會看到完整資料。</p>'+
       '<textarea id="shLink" rows="4" readonly style="grid-column:1/-1;width:100%;font-size:11px" aria-label="公開連結">'+esc(link)+'</textarea>'+
       '<button class="btn sm" type="button" id="shCopy">複製連結</button>'+
-      '<p class="hint" style="grid-column:1/-1;margin:0">需要先把 Apps Script 換成新版（版本 public-1），並重新部署成新版本，公開連結才讀得到資料。連結內有你的 Apps Script 網址，請搭配「不容易猜到的密碼」使用。</p>',
+      '<p class="hint" style="grid-column:1/-1;margin:0">需要先把 Apps Script 換成新版（版本 public-2），並重新部署成新版本，公開連結才讀得到資料。連結內有你的 Apps Script 網址，請搭配「不容易猜到的密碼」使用。</p>',
       '<button class="btn primary" type="button" id="shDone">完成</button>');
     $('shDone').onclick=closeModal;
     $('shCopy').onclick=function(){var ta=$('shLink');ta.select();if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(ta.value).then(function(){toast('已複製連結')},function(){toast('請手動複製已選取的文字')});else toast('請手動複製已選取的文字')};
@@ -2221,11 +2298,11 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     row('購入日期',esc(it.buyDate));
     row('售出日期',it.status==='已售出'?esc(it.soldDate):'');
     row('預計到貨日',it.status==='預購中'?esc(it.eta):'');
-    row('借給',it.cond==='借出中'?esc(it.lentTo||'（未填）'):'');
+    row('借給',it.status==='借出中'?esc(it.lentTo||'（未填）'):'');
     row('備註',esc(it.note));
     var body='<div class="dt">'+pic+
       '<div class="src" style="position:static;align-self:center" role="group" aria-label="圖片來源"><button type="button" data-dv="official" aria-pressed="'+(v==='official')+'">官方圖</button><button type="button" data-dv="photo" aria-pressed="'+(v==='photo')+'">實拍圖</button></div>'+
-      (url?'<button class="btn sm" type="button" id="dtPhotoEdit" style="align-self:center">裁切／調整這張照片</button>':'')+'<div class="pills"><span class="pill '+stCls(it.status)+'">'+esc(it.status)+'</span><span class="pill '+(it.cond==='借出中'?'lent':'cond')+'">'+esc(it.cond)+'</span>'+etaPill(it)+'</div>'+
+      (url?'<button class="btn sm" type="button" id="dtPhotoEdit" style="align-self:center">裁切／調整這張照片</button>':'')+'<div class="pills"><span class="pill '+stCls(it.status)+'">'+esc(it.status)+'</span><span class="pill cond">'+esc(it.cond)+'</span>'+etaPill(it)+'</div>'+
       ((it.tags&&it.tags.length)?'<div class="tags">'+it.tags.map(function(t){return '<span data-tag="'+esc(t)+'" role="button" tabindex="0" title="用這個標籤篩選">#'+esc(t)+'</span>'}).join('')+'</div>':'')+
       '<div>'+rows.join('')+'</div></div>';
     var flow=flowBtn(it).replace('class="btn sm primary"','class="btn primary" id="dtFlow"');
@@ -2285,6 +2362,8 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     var set={};ids.forEach(function(k){set[k]=1});
     state.items.forEach(function(i){
       if(!set[i.id])return;
+      if(st==='借出中'&&i.status!=='借出中')i.prevStatus=i.status;
+      if(i.status==='借出中'&&st!=='借出中')i.lentTo='';
       i.status=st;
       if(st==='已售出'&&!i.soldDate)i.soldDate=todayStr();
     });
@@ -2299,7 +2378,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     var n=selIds().length,dis=n?'':' disabled';
     bar.hidden=false;
     bar.innerHTML='<span class="bn">已選 '+n+' 件</span>'+(n?'':'<span class="bh">點卡片或勾選框選取，Shift 可連選</span>')+
-      '<select data-q="1" aria-label="快速選取"><option value="">快速選取…</option><option value="all">目前結果：全選</option><option value="invert">目前結果：反選</option><option value="st:預購中">目前結果：預購中</option><option value="late">目前結果：逾期未到</option><option value="st:已到貨">目前結果：已到貨</option><option value="st:待售出">目前結果：待售出</option><option value="st:已售出">目前結果：已售出</option></select>'+
+      '<select data-q="1" aria-label="快速選取"><option value="">快速選取…</option><option value="all">目前結果：全選</option><option value="invert">目前結果：反選</option><option value="st:預購中">目前結果：預購中</option><option value="late">目前結果：逾期未到</option><option value="st:已到貨">目前結果：已到貨</option><option value="st:待售出">目前結果：待售出</option><option value="st:借出中">目前結果：借出中</option><option value="st:已售出">目前結果：已售出</option></select>'+
       '<button type="button" class="btn sm" data-b="all">全選目前結果</button><button type="button" class="btn sm" data-b="none"'+dis+'>清除選取</button><span class="bsep"></span>'+
       '<button type="button" class="btn sm primary" data-b="st:已到貨"'+dis+'>標記到貨</button>'+
       '<button type="button" class="btn sm primary" data-b="st:待售出"'+dis+'>標記待售出</button>'+
@@ -2325,7 +2404,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     openModal('批次編輯（'+n+' 件）',
       '<p class="hint" style="grid-column:1/-1;margin:0">只有填寫的欄位會套用到已選的 '+n+' 件，留空代表不更改。</p>'+
       '<label class="f">到貨狀況<select id="bStatus">'+blank+optList(STATUS,'')+'</select></label>'+
-      '<label class="f">衣況<select id="bCond">'+blank+optList(COND,'')+'</select></label>'+'<label class="f">借給誰（衣況選借出中時）<input type="text" id="bLent"></label>'+
+      '<label class="f">衣況<select id="bCond">'+blank+optList(COND,'')+'</select></label>'+'<label class="f">借給誰（填寫後狀態自動變「借出中」）<input type="text" id="bLent"></label>'+
       '<label class="f">分類<select id="bCat">'+blank+'<option value="__none">改為未分類</option>'+optList(state.cats,'')+'</select></label>'+
       '<label class="f">品牌<input type="text" id="bBrand" placeholder="不更改"></label>'+
       '<label class="f">尺寸<input type="text" id="bSize" placeholder="不更改"></label>'+
@@ -2346,8 +2425,9 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
       var add=tl('bAddTags'),del=tl('bDelTags'),cnt=0;snap();
       state.items.forEach(function(i){
         if(!set[i.id])return;cnt++;
-        if(v('bStatus')){i.status=v('bStatus');if(i.status==='已售出'&&!i.soldDate&&!v('bSoldDate'))i.soldDate=todayStr();}
-        if(v('bCond')){if(v('bCond')==='借出中'){if(i.cond!=='借出中')i.prevCond=i.cond;i.lentTo=v('bLent');}else{i.lentTo='';i.prevCond='';}i.cond=v('bCond');}
+        if(v('bStatus')){var ns=v('bStatus');if(ns==='借出中'&&i.status!=='借出中')i.prevStatus=i.status;if(i.status==='借出中'&&ns!=='借出中')i.lentTo='';i.status=ns;if(i.status==='已售出'&&!i.soldDate&&!v('bSoldDate'))i.soldDate=todayStr();}
+        if(v('bCond'))i.cond=v('bCond');
+        if(v('bLent')){var ol=i.lentTo;i.lentTo=v('bLent');lentSync(i,ol);}
         if(v('bCat'))i.cat=v('bCat')==='__none'?'':v('bCat');
         if(v('bBrand'))i.brand=v('bBrand');
         if(v('bSize'))i.size=v('bSize');
@@ -2370,6 +2450,8 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   $('btnSale').onclick=openSale;
   $('btnStats').onclick=openStats;
   $('btnSync').onclick=openSync;
+  $('btnSyncNow').onclick=syncNow;
+  $('fab').onclick=function(){$('btnAdd').click()};
   PUB=pubParse();
   if(!PUB)applyHashCfg();
   setupAppMeta();
@@ -2422,7 +2504,17 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     var a=b.dataset.act,id=b.dataset.id;
     if(a==='view'){ui.view[id]=b.dataset.v;renderGrid();}
     else if(a==='arrive'||a==='tosell'||a==='sold'){var to={arrive:'已到貨',tosell:'待售出',sold:'已售出'}[a];snap();setStatus([id],to);var cur=state.items.filter(function(i){return i.id===id})[0];undoToast(a==='sold'?'已標記已售出（原價 '+money(soldPrice(cur))+'），要改售價請按編輯':'已標記'+to)}
-    else if(a==='return'){snap();state.items.forEach(function(i){if(i.id===id){i.cond=i.prevCond||'二手無汙損';i.prevCond='';i.lentTo='';}});save();renderAll();undoToast('已標記歸還')}
+    else if(a==='return'){snap();state.items.forEach(function(i){if(i.id===id){i.status=i.prevStatus||(Number(i.plan)>0?'待售出':'已到貨');i.prevStatus='';i.lentTo='';}});save();renderAll();undoToast('已標記歸還')}
+    else if(a==='lend'){
+      var li=state.items.filter(function(i){return i.id===id})[0];if(!li)return;
+      var names=[];state.items.forEach(function(i){var n=String(i.lentTo||'').trim();if(n&&names.indexOf(n)<0)names.push(n)});
+      openModal('借出「'+(li.name||li.brand||'')+'」','<label class="f full">借給誰<input type="text" id="lnName" placeholder="例：小美" list="lnList" autocomplete="off"></label><datalist id="lnList">'+names.map(function(n){return '<option value="'+esc(n)+'">'}).join('')+'</datalist>',
+        '<button class="btn" type="button" id="lnX">取消</button><button class="btn primary" type="button" id="lnOk">確定借出</button>');
+      $('lnX').onclick=closeModal;
+      var ok=function(){var v=$('lnName').value.trim();if(!v){$('lnName').focus();return;}snap();li.lentTo=v;lentSync(li,'');save();closeModal();renderAll();undoToast('已借給 '+v)};
+      $('lnOk').onclick=ok;$('lnName').onkeydown=function(e){if(e.key==='Enter')ok()};
+      setTimeout(function(){$('lnName').focus()},30);
+    }
     else if(a==='poster'){openPoster(id)}
     else if(a==='edit'){openForm(id)}
     else if(a==='del'){ui.pendingDel=id;renderGrid()}
