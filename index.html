@@ -199,6 +199,15 @@ table.tbl td:nth-child(2),table.tbl th:nth-child(2){min-width:150px}
 .loss{color:var(--danger);font-weight:700}
 .pill.gainp{background:var(--got-bg);color:var(--got);font-weight:700}
 .pill.lossp{background:var(--surface);border:1.5px solid var(--danger);color:var(--danger);font-weight:700}
+.menuwrap{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 8px);z-index:12;min-width:210px;background:var(--surface);border:2.5px solid var(--ol);border-radius:16px;box-shadow:4px 5px 0 var(--ol);padding:6px;display:flex;flex-direction:column}
+.menu .mi{border:0;background:transparent;text-align:left;padding:9px 12px;border-radius:10px;font-size:15px;color:var(--ink)}
+.menu .mi:hover{background:var(--accent-soft)}
+.menu hr{border:0;border-top:2px dashed var(--line);margin:4px 6px}
+body.pub .wrap>:not(#pubApp):not(.bunting){display:none!important}
+body.pub .pic,body.pub .name{cursor:default}
+.pubph{display:grid;place-items:center;height:100%;color:var(--muted);font-size:13px}
+.pubfoot{display:flex;justify-content:center;margin-top:22px}
 @media (max-width:560px){
   header.top h1{font-size:24px}
   .stats li{padding:0 12px}
@@ -293,6 +302,15 @@ table.tbl td{border-bottom:2px dashed var(--line)}
 .loss{color:var(--danger);font-weight:700}
 .pill.gainp{background:var(--got-bg);color:var(--got);font-weight:700}
 .pill.lossp{background:var(--surface);border:1.5px solid var(--danger);color:var(--danger);font-weight:700}
+.menuwrap{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 8px);z-index:12;min-width:210px;background:var(--surface);border:2.5px solid var(--ol);border-radius:16px;box-shadow:4px 5px 0 var(--ol);padding:6px;display:flex;flex-direction:column}
+.menu .mi{border:0;background:transparent;text-align:left;padding:9px 12px;border-radius:10px;font-size:15px;color:var(--ink)}
+.menu .mi:hover{background:var(--accent-soft)}
+.menu hr{border:0;border-top:2px dashed var(--line);margin:4px 6px}
+body.pub .wrap>:not(#pubApp):not(.bunting){display:none!important}
+body.pub .pic,body.pub .name{cursor:default}
+.pubph{display:grid;place-items:center;height:100%;color:var(--muted);font-size:13px}
+.pubfoot{display:flex;justify-content:center;margin-top:22px}
 @media (max-width:560px){
   body{padding-block:34px 56px}
   header.top h1{font-size:34px}
@@ -315,12 +333,19 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   <header class="top">
     <div>
       <h1>寶寶衣櫃</h1>
-      <p>記錄每一件買進、穿過、轉賣的小衣服。已匯入 Alina 衣櫥資料，可直接編輯。</p>
+      <p>記錄每一件買進、穿過、轉賣的小衣服。資料請在「同步試算表」連到你的 Google 試算表後讀取。</p>
     </div>
     <ul class="stats" id="stats"></ul>
   </header>
   <div class="bunting" aria-hidden="true"></div>
 
+  <div id="pubApp" hidden>
+    <header class="top"><div><h1>寶寶衣櫃</h1><p id="pubSub">現有 0 件</p></div></header>
+    <div class="row" style="margin-bottom:14px"><input type="search" id="pubQ" class="search" placeholder="搜尋品牌、尺寸" aria-label="搜尋"><select id="pubBrand" style="width:auto" aria-label="品牌"></select><select id="pubCond" style="width:auto" aria-label="衣況"></select></div>
+    <main class="grid" id="pubGrid"></main>
+    <div class="pubfoot"><button class="btn sm" type="button" id="pubEdit">編輯（需要密碼）</button></div>
+  </div>
+  <div class="remind" id="a2hs" hidden><span>要讓手機每次都免輸入：請把<b>目前這個畫面</b>「加到主畫面」（iPhone：Safari 的分享 →「加入主畫面」；Android：Chrome 選單 →「加到主畫面」）。之後從主畫面的圖示開啟，網址和密碼會自動帶入。</span><button class="btn sm primary" type="button" id="a2hsOk">我加好了</button></div>
   <div class="remind" id="remind" hidden><span id="remindText"></span><button class="btn sm primary" type="button" id="remindExport">匯出 Excel</button><button class="btn sm" type="button" id="remindBackup">複製備份文字</button><button class="btn sm" type="button" id="remindSnooze">3 天後再提醒</button></div>
   <section class="bar" aria-label="篩選與搜尋">
     <div class="row">
@@ -328,18 +353,28 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
       <button class="btn" id="btnFilters" type="button" aria-expanded="false" aria-controls="filtersBox">篩選 ▾</button>
       <button class="btn" id="btnClear" type="button" hidden>清除全部</button>
       <button class="btn primary" id="btnAdd" type="button">＋ 新增衣服</button>
-      <button class="btn" id="btnOrder" type="button">貼上訂單</button>
-      <button class="btn" id="btnSale" type="button">販售包</button>
-      <button class="btn" id="btnStats" type="button">統計</button>
-      <button class="btn" id="btnBatch" type="button">批次編輯</button>
-      <button class="btn" id="btnImport" type="button">匯入資料</button>
-      <button class="btn" id="btnExport" type="button">匯出 Excel</button>
-      <button class="btn" id="btnCats" type="button">管理分類</button>
-      <button class="btn" id="btnBackup" type="button">備份／還原</button>
-      <button class="btn" id="btnSync" type="button">同步試算表</button>
+      <div class="menuwrap">
+        <button class="btn" id="btnMore" type="button" aria-haspopup="menu" aria-expanded="false">更多 ▾</button>
+        <div class="menu" id="moreMenu" role="menu" hidden>
+          <button class="mi" id="btnOrder" type="button">貼上訂單</button>
+          <button class="mi" id="btnBatch" type="button">批次編輯</button>
+          <button class="mi" id="btnSale" type="button">販售包</button>
+          <button class="mi" id="btnStats" type="button">統計</button>
+          <hr>
+          <button class="mi" id="btnTags" type="button">管理標籤</button>
+          <button class="mi" id="btnCats" type="button">管理分類</button>
+          <hr>
+          <button class="mi" id="btnImport" type="button">匯入資料</button>
+          <button class="mi" id="btnExport" type="button">匯出 Excel</button>
+          <button class="mi" id="btnBackup" type="button">備份／還原</button>
+          <hr>
+          <button class="mi" id="btnSync" type="button">同步試算表</button>
+          <button class="mi" id="btnShare" type="button">分享公開連結</button>
+        </div>
+      </div>
     </div>
     <div class="chips" id="statusChips" role="group" aria-label="到貨狀況"></div>
-    <div class="tagrow"><span class="hint">標籤</span><div class="chips" id="tagBar" role="group" aria-label="標籤篩選"></div><button class="btn sm" id="btnTags" type="button">管理</button></div>
+    <div class="tagrow"><button class="btn sm" id="btnTagToggle" type="button" aria-expanded="false">標籤 ▾</button><div class="chips" id="tagBar" role="group" aria-label="標籤篩選"></div></div>
     <div class="filters" id="filtersBox" hidden>
       <label>衣況<select id="fCond"></select></label>
       <label>分類<select id="fCat"></select></label>
@@ -384,10 +419,10 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   };
 
   function demo(){ return migrate(JSON.parse(DEMO_JSON)); }
-  var DEMO_JSON='{"cats":["套裝","吊帶褲","洋裝","包屁衣","內搭"],"items":[{"id":"A00001","brand":"GL","name":"波西蕾絲套裝","size":"M","cat":"套裝","tags":["穿過可賣","單售","可販售"],"buy":500,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"","note":"預計售價 NT$ 500","shape":"top","color":"#7a6fb0"},{"id":"A00002","brand":"An","name":"貓貓花苞吊帶褲","size":"70","cat":"吊帶褲","tags":["穿過可賣","配菜","可販售"],"buy":600,"sell":0,"status":"已到貨","cond":"全新未下水","official":"","photo":"images/photo/A00002.jpg","note":"預計售價 NT$ 600","shape":"pants","color":"#4a6c9b"},{"id":"A00003","brand":"珍珠貝比","name":"晨光花束肩帶洋","size":"S","cat":"洋裝","tags":["穿過可賣","單售","可販售"],"buy":350,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00003.jpg","photo":"","note":"已提供官方照；預計售價 NT$ 450","shape":"dress","color":"#d56f86"},{"id":"A00004","brand":"珍珠貝比","name":"晨光花束肩帶洋","size":"S","cat":"洋裝","tags":["穿過可賣","單售","可販售"],"buy":399,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00004.jpg","photo":"","note":"已提供官方照；預計售價 NT$ 500","shape":"dress","color":"#d56f86"},{"id":"A00005","brand":"珍珠貝比","name":"藍瓷花宴 桃心套裝","size":"18M","cat":"套裝","tags":["穿過可賣","單售","可販售"],"buy":450,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00005.jpg","note":"預計售價 NT$ 450","shape":"top","color":"#7a6fb0"},{"id":"A00006","brand":"GL","name":"花廊套裝","size":"18M","cat":"套裝","tags":["穿過可賣","單售","可販售"],"buy":580,"sell":0,"status":"已到貨","cond":"全新未下水","official":"","photo":"","note":"預計售價 NT$ 580","shape":"top","color":"#7a6fb0"},{"id":"A00007","brand":"米寶","name":"第一次愛的人 綁帶洋","size":"S","cat":"洋裝","tags":["穿過可賣","單售","可販售"],"buy":500,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00007.jpg","photo":"images/photo/A00007.jpg","note":"已提供官方照；預計售價 NT$ 500","shape":"dress","color":"#d56f86"},{"id":"A00008","brand":"米寶","name":"夢幻花結","size":"M","cat":"洋裝","tags":["穿過可賣","單售","可販售"],"buy":590,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00008.jpg","photo":"images/photo/A00008.jpg","note":"預計售價 NT$ 590","shape":"dress","color":"#d56f86"},{"id":"A00009","brand":"暹羅小巷","name":"粉玫瑰","size":"S","cat":"洋裝","tags":["穿過可賣","單售","可販售"],"buy":600,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"","note":"款名待確認；預計售價 NT$ 600","shape":"dress","color":"#d56f86"},{"id":"A00010","brand":"珍珠貝比","name":"不願再愛","size":"M","cat":"套裝","tags":["穿過可賣","組一","可販售"],"buy":580,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00010.jpg","photo":"images/photo/A00010.jpg","note":"預計售價 NT$ 580","shape":"top","color":"#7a6fb0"},{"id":"A00011","brand":"珍珠貝比","name":"香榭悠悠","size":"SS","cat":"套裝","tags":["穿過可賣","單售","可販售"],"buy":550,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00011.jpg","photo":"images/photo/A00011.jpg","note":"已提供官方照；預計售價 NT$ 550","shape":"top","color":"#7a6fb0"},{"id":"A00012","brand":"珍珠貝比","name":"秋日貓影","size":"12M","cat":"洋裝","tags":["穿過可賣","配菜","可販售"],"buy":480,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00012.jpg","photo":"images/photo/A00012.jpg","note":"已提供官方照；預計售價 NT$ 399","shape":"dress","color":"#d56f86"},{"id":"A00013","brand":"珍珠貝比","name":"藍藍鯨制服套裝","size":"12M","cat":"套裝","tags":["穿過可賣","配菜","可販售"],"buy":500,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00013.jpg","photo":"images/photo/A00013.jpg","note":"已提供官方照；預計售價 NT$ 500","shape":"top","color":"#7a6fb0"},{"id":"A00014","brand":"米寶","name":"方領","size":"M","cat":"洋裝","tags":["穿過可賣","組一","可販售"],"buy":580,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00014.jpg","photo":"","note":"預計售價 NT$ 580","shape":"dress","color":"#d56f86"},{"id":"A00015","brand":"珍珠貝比","name":"嫁紗","size":"S","cat":"套裝","tags":["穿過可賣","組二","可販售"],"buy":650,"sell":0,"status":"已到貨","cond":"二手有汙","official":"images/official/A00015.jpg","photo":"","note":"裙擺有一黑點；預計售價 NT$ 1200","shape":"top","color":"#7a6fb0"},{"id":"A00016","brand":"An","name":"美背洋","size":"80","cat":"洋裝","tags":["穿過可賣","配菜","可販售"],"buy":380,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00016.jpg","photo":"images/photo/A00016.jpg","note":"預計售價 NT$ 380","shape":"dress","color":"#d56f86"},{"id":"A00017","brand":"珍珠貝比","name":"花磚綁帶洋","size":"S","cat":"洋裝","tags":["穿過可賣","組二","可販售"],"buy":680,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00017.jpg","photo":"","note":"預計售價 NT$ 680","shape":"dress","color":"#d56f86"},{"id":"A00018","brand":"懶媽","name":"粉色三層洋","size":"M","cat":"洋裝","tags":["穿過可賣","單售","可販售"],"buy":777,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00018.jpg","note":"預計售價 NT$ 777","shape":"dress","color":"#d56f86"},{"id":"A00019","brand":"珍珠貝比","name":"紫暮光飛袖","size":"M","cat":"洋裝","tags":["穿過可賣","標樓","可販售"],"buy":400,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"","note":"預計售價 NT$ 400","shape":"dress","color":"#d56f86"},{"id":"A00020","brand":"珍珠貝比","name":"蜜桃成熟時","size":"S","cat":"套裝","tags":["穿過可賣","組一","可販售"],"buy":450,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00020.jpg","photo":"","note":"預計售價 NT$ 450","shape":"top","color":"#7a6fb0"},{"id":"A00021","brand":"珍珠貝比","name":"水必桃 PBN 套裝","size":"S","cat":"套裝","tags":["留存❤️","單售"],"buy":580,"sell":0,"status":"已到貨","cond":"全新未下水","official":"images/official/A00021.jpg","photo":"","note":"已提供官方照；預計售價 NT$ 580","shape":"top","color":"#7a6fb0"},{"id":"A00022","brand":"MNC","name":"Dad\'s Girl","size":"12-18M","cat":"包屁衣","tags":["留存❤️","官方"],"buy":510,"sell":0,"status":"已到貨","cond":"全新未下水","official":"","photo":"","note":"款名待確認；預計售價 NT$ 510","shape":"onesie","color":"#6aa37c"},{"id":"A00023","brand":"珍珠貝比","name":"小北爛 黑花綁帶洋","size":"M","cat":"洋裝","tags":["留存❤️","單售","含對夾"],"buy":750,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00023.jpg","photo":"images/photo/A00023.jpg","note":"預計售價 NT$ 750","shape":"dress","color":"#d56f86"},{"id":"A00024","brand":"珍珠貝比","name":"囍 綁帶洋","size":"M","cat":"洋裝","tags":["留存❤️","標樓"],"buy":538,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00024.jpg","photo":"images/photo/A00024.jpg","note":"款名待確認；預計售價 NT$ 550","shape":"dress","color":"#d56f86"},{"id":"A00025","brand":"珍珠貝比","name":"動物星球","size":"S","cat":"洋裝","tags":["留存❤️","標樓"],"buy":680,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00025.jpg","photo":"","note":"已提供官方照；預計售價 NT$ 680","shape":"dress","color":"#d56f86"},{"id":"A00026","brand":"珍珠貝比","name":"雙子星綁帶洋","size":"M","cat":"洋裝","tags":["留存❤️","單售"],"buy":550,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00026.jpg","photo":"images/photo/A00026.jpg","note":"已提供官方照；預計售價 NT$ 550","shape":"dress","color":"#d56f86"},{"id":"A00027","brand":"童花","name":"不知名粉色","size":"待確認","cat":"套裝","tags":["等待穿拍","單售"],"buy":399,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00027.jpg","note":"預計售價 NT$ 500","shape":"top","color":"#7a6fb0"},{"id":"A00028","brand":"GL","name":"藍煙宮廷洋","size":"待確認","cat":"洋裝","tags":["等待穿拍","單售"],"buy":399,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00028.jpg","photo":"images/photo/A00028.jpg","note":"預計售價 NT$ 500","shape":"dress","color":"#d56f86"},{"id":"A00029","brand":"珍珠貝比","name":"貓咪60年代方領","size":"待確認","cat":"套裝","tags":["等待穿拍","單售"],"buy":550,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00029.jpg","photo":"images/photo/A00029.jpg","note":"已提供官方照；預計售價 NT$ 550","shape":"top","color":"#7a6fb0"},{"id":"A00030","brand":"An","name":"吊帶褲","size":"90","cat":"吊帶褲","tags":["等待穿拍","單售"],"buy":520,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00030.jpg","note":"預計售價 NT$ 520","shape":"pants","color":"#4a6c9b"},{"id":"A00031","brand":"Meetyu","name":"粉黛花語吊帶褲","size":"SS","cat":"吊帶褲","tags":["等待穿拍","單售","未入櫃"],"buy":480,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"","note":"預計售價 NT$ 480","shape":"pants","color":"#4a6c9b"},{"id":"A00032","brand":"Meetyu","name":"吊帶褲","size":"SS","cat":"吊帶褲","tags":["等待穿拍","單售","未入櫃"],"buy":480,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"","note":"預計售價 NT$ 480","shape":"pants","color":"#4a6c9b"},{"id":"A00033","brand":"珍珠貝比","name":"水必桃 重工","size":"XS","cat":"洋裝","tags":["等待穿拍","單售"],"buy":680,"sell":0,"status":"已到貨","cond":"全新未下水","official":"images/official/A00033.jpg","photo":"","note":"預計售價 NT$ 680","shape":"dress","color":"#d56f86"},{"id":"A00034","brand":"珍珠貝比","name":"紫境小夜曲 蕾絲搖擺","size":"S","cat":"洋裝","tags":["等待穿拍","單售","外借"],"buy":400,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00034.jpg","photo":"images/photo/A00034.jpg","note":"預計售價 NT$ 400","shape":"dress","color":"#d56f86"},{"id":"A00035","brand":"珍珠貝比","name":"暮光芙蓉 蕾絲搖擺","size":"S","cat":"洋裝","tags":["等待穿拍","單售","外借"],"buy":400,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00035.jpg","photo":"images/photo/A00035.jpg","note":"預計售價 NT$ 400","shape":"dress","color":"#d56f86"},{"id":"A00036","brand":"珍珠貝比","name":"紫境繁花 蕾絲搖擺","size":"S","cat":"洋裝","tags":["等待穿拍","單售","外借"],"buy":399,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00036.jpg","photo":"","note":"已提供官方照；預計售價 NT$ 399","shape":"dress","color":"#d56f86"},{"id":"A00037","brand":"An","name":"花磚洋","size":"待確認","cat":"洋裝","tags":["等待穿拍","單售"],"buy":399,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00037.jpg","note":"預計售價 NT$ 399","shape":"dress","color":"#d56f86"},{"id":"A00038","brand":"萌芽","name":"雛菊咪咪包屁衣","size":"M","cat":"包屁衣","tags":["等待穿拍","單售","外借"],"buy":650,"sell":0,"status":"已到貨","cond":"全新未下水","official":"images/official/A00038.jpg","photo":"","note":"預計售價 NT$ 650","shape":"onesie","color":"#6aa37c"},{"id":"A00039","brand":"珍珠貝比","name":"蜜糖田園","size":"S","cat":"洋裝","tags":["等待穿拍","單售","外借"],"buy":400,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00039.jpg","photo":"","note":"已提供官方照","shape":"dress","color":"#d56f86"},{"id":"A00040","brand":"珍珠貝比","name":"修煉愛情","size":"S","cat":"洋裝","tags":["等待穿拍","單售","外借"],"buy":400,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00040.jpg","photo":"","note":"已提供官方照","shape":"dress","color":"#d56f86"},{"id":"A00041","brand":"童花","name":"藍田玫瑰","size":"S","cat":"洋裝","tags":["等待穿拍","單售","含對夾","外借"],"buy":500,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00041.jpg","photo":"","note":"已提供官方照；預計售價 NT$ 500","shape":"dress","color":"#d56f86"},{"id":"A00042","brand":"暹羅小巷","name":"藍","size":"M","cat":"洋裝","tags":["等待穿拍","組一","含對夾"],"buy":640,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"","note":"款名待確認；預計售價 NT$ 640","shape":"dress","color":"#d56f86"},{"id":"A00043","brand":"不知名","name":"泰洋","size":"待確認","cat":"洋裝","tags":["等待穿拍","單售","髮帶","外借"],"buy":400,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"","note":"預計售價 NT$ 400","shape":"dress","color":"#d56f86"},{"id":"A00044","brand":"珍珠貝比","name":"藍夢莊園 重工洋","size":"XS","cat":"洋裝","tags":["等待穿拍","單售"],"buy":500,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00044.jpg","note":"預計售價 NT$ 500","shape":"dress","color":"#d56f86"},{"id":"A00045","brand":"鯊妹","name":"公主澎袖透膚內搭－粉","size":"1","cat":"內搭","tags":["鯊妹社團","官方"],"buy":299,"sell":0,"status":"已到貨","cond":"全新未下水","official":"","photo":"","note":"尺寸原標示為1","shape":"top","color":"#c98b4b"},{"id":"A00046","brand":"鯊妹","name":"公主澎袖透膚內搭－白","size":"1","cat":"內搭","tags":["鯊妹社團","官方"],"buy":299,"sell":0,"status":"已到貨","cond":"全新未下水","official":"","photo":"","note":"尺寸原標示為1","shape":"top","color":"#c98b4b"},{"id":"A00047","brand":"包子媽手作","name":"粉貓吊帶洋","size":"1Y","cat":"洋裝","tags":["手作","單售"],"buy":1200,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00047.jpg","note":"款名待確認；預計售價 NT$ 1200","shape":"dress","color":"#d56f86"},{"id":"A00048","brand":"包子媽手作","name":"美背綁帶洋","size":"待確認","cat":"洋裝","tags":["手作","單售","外借"],"buy":999,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00048.jpg","note":"預計售價 NT$ 999","shape":"dress","color":"#d56f86"},{"id":"A00049","brand":"懶媽","name":"米色貓咪吊帶褲","size":"M","cat":"吊帶褲","tags":["手作","單售"],"buy":850,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00049.jpg","note":"款名待確認；預計售價 NT$ 850","shape":"pants","color":"#4a6c9b"},{"id":"A00050","brand":"懶媽","name":"粉色兔子吊帶褲","size":"M","cat":"吊帶褲","tags":["手作","單售","髮帶"],"buy":700,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00050.jpg","note":"款名待確認；預計售價 NT$ 700","shape":"pants","color":"#4a6c9b"},{"id":"A00051","brand":"微笑","name":"馬戲團吊帶褲","size":"90","cat":"吊帶褲","tags":["手作","單售"],"buy":399,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00051.jpg","note":"款名待確認；預計售價 NT$ 600","shape":"pants","color":"#4a6c9b"},{"id":"A00052","brand":"NM","name":"藍白花套裝","size":"2T","cat":"套裝","tags":["NM","單售"],"buy":2500,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00052.jpg","photo":"","note":"預計售價 NT$ 2500","shape":"top","color":"#7a6fb0"},{"id":"A00053","brand":"NM","name":"奶茶色套裝","size":"18M","cat":"套裝","tags":["NM","單售"],"buy":1720,"sell":0,"status":"已到貨","cond":"全新未下水","official":"","photo":"","note":"預計售價 NT$ 1720","shape":"top","color":"#7a6fb0"},{"id":"A00054","brand":"NM","name":"紅花+牛仔套裝","size":"18M","cat":"套裝","tags":["NM","單售"],"buy":1800,"sell":0,"status":"已到貨","cond":"全新未下水","official":"images/official/A00054.jpg","photo":"","note":"預計售價 NT$ 1800","shape":"top","color":"#7a6fb0"},{"id":"A00055","brand":"NM","name":"白色雪紡","size":"2T","cat":"洋裝","tags":["NM","單售"],"buy":1888,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"images/official/A00055.jpg","photo":"","note":"預計售價 NT$ 1888","shape":"dress","color":"#d56f86"},{"id":"A00056","brand":"NM","name":"蜜桃橘花布","size":"待確認","cat":"洋裝","tags":["NM","單售"],"buy":1700,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00056.jpg","note":"預計售價 NT$ 1700","shape":"dress","color":"#d56f86"},{"id":"A00057","brand":"NM","name":"乾燥玫瑰","size":"18M","cat":"洋裝","tags":["NM","單售","外借"],"buy":1430,"sell":0,"status":"已到貨","cond":"全新未下水","official":"","photo":"images/photo/A00057.jpg","note":"預計售價 NT$ 1800","shape":"dress","color":"#d56f86"},{"id":"A00058","brand":"NM","name":"白領粉","size":"18M","cat":"洋裝","tags":["NM","單售"],"buy":1500,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"","note":"預計售價 NT$ 1500","shape":"dress","color":"#d56f86"},{"id":"A00059","brand":"NM","name":"奶茶巨澎","size":"待確認","cat":"洋裝","tags":["NM","組一"],"buy":1500,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00059.jpg","note":"預計售價 NT$ 1500","shape":"dress","color":"#d56f86"},{"id":"A00060","brand":"NM","name":"草莓牛奶（新版）","size":"18M","cat":"洋裝","tags":["NM","單售"],"buy":1720,"sell":0,"status":"已到貨","cond":"全新未下水","official":"","photo":"","note":"預計售價 NT$ 1720","shape":"dress","color":"#d56f86"},{"id":"A00061","brand":"NM","name":"Blueberry Pie 巨澎","size":"18M","cat":"洋裝","tags":["NM","單售"],"buy":1490,"sell":0,"status":"預購中","cond":"全新未下水","official":"images/official/A00061.jpg","photo":"","note":"","shape":"dress","color":"#d56f86"},{"id":"A00062","brand":"NM","name":"粉紫色花花裙","size":"18M","cat":"洋裝","tags":["NM","單售"],"buy":1500,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00062.jpg","note":"預計售價 NT$ 1500","shape":"dress","color":"#d56f86"},{"id":"A00063","brand":"NM","name":"嫩粉色巨澎","size":"18M","cat":"洋裝","tags":["NM","單售"],"buy":1300,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00063.jpg","note":"預計售價 NT$ 1300","shape":"dress","color":"#d56f86"},{"id":"A00064","brand":"NM","name":"奶蓋","size":"18M","cat":"洋裝","tags":["NM","官方"],"buy":1430,"sell":0,"status":"預購中","cond":"全新未下水","official":"","photo":"","note":"預計：交換藍花","shape":"dress","color":"#d56f86"},{"id":"A00065","brand":"NM","name":"哈密瓜巨澎","size":"18M","cat":"洋裝","tags":["NM","官方"],"buy":1720,"sell":0,"status":"預購中","cond":"全新未下水","official":"","photo":"","note":"","shape":"dress","color":"#d56f86"},{"id":"A00066","brand":"NM","name":"深藍拚色","size":"18M","cat":"洋裝","tags":["NM","官方"],"buy":1590,"sell":0,"status":"預購中","cond":"全新未下水","official":"","photo":"","note":"","shape":"dress","color":"#d56f86"},{"id":"A00067","brand":"NM","name":"海龜巨澎","size":"18M","cat":"洋裝","tags":["NM","官方"],"buy":1800,"sell":0,"status":"預購中","cond":"全新未下水","official":"","photo":"","note":"","shape":"dress","color":"#d56f86"},{"id":"A00068","brand":"NM","name":"紅色涼感","size":"18M","cat":"洋裝","tags":["NM","官方"],"buy":1190,"sell":0,"status":"已到貨","cond":"全新未下水","official":"images/official/A00068.jpg","photo":"","note":"預計售價 NT$ 1190","shape":"dress","color":"#d56f86"},{"id":"A00069","brand":"NM","name":"純藍涼感","size":"18M","cat":"洋裝","tags":["NM","官方"],"buy":1690,"sell":0,"status":"預購中","cond":"全新未下水","official":"","photo":"","note":"","shape":"dress","color":"#d56f86"},{"id":"A00070","brand":"NM","name":"綠色盲包","size":"2T","cat":"洋裝","tags":["NM","官方"],"buy":1720,"sell":0,"status":"預購中","cond":"全新未下水","official":"","photo":"","note":"","shape":"dress","color":"#d56f86"},{"id":"A00071","brand":"不知名","name":"三麗鷗綁帶洋","size":"待確認","cat":"洋裝","tags":["單售"],"buy":590,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"","note":"","shape":"dress","color":"#d56f86"},{"id":"A00072","brand":"NM","name":"紫丁香巨澎","size":"2T","cat":"洋裝","tags":["NM","單售"],"buy":1500,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00072.jpg","note":"預計售價 NT$ 1500","shape":"dress","color":"#d56f86"},{"id":"A00073","brand":"NM","name":"生日蛋糕巨澎","size":"2T","cat":"洋裝","tags":["NM","單售"],"buy":1538,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"images/photo/A00073.jpg","note":"預計售價 NT$ 1538","shape":"dress","color":"#d56f86"},{"id":"A00074","brand":"童花","name":"藍陵","size":"","cat":"","tags":[],"buy":0,"sell":0,"status":"已到貨","cond":"二手無汙損","official":"","photo":"","note":"","shape":"top","color":"#2a7f90"}]}';
+  var DEMO_JSON='{"cats":[],"items":[]}';
 
   var state=load();
-  var ui={status:'全部',cond:'',cat:'',tags:[],tagMode:'all',brand:'',sort:'new',flag:'',layout:(function(){try{return localStorage.getItem('babyWardrobe.layout')==='table'?'table':'cards'}catch(e){return 'cards'}})(),selMode:false,sel:{},batchDel:false,q:'',view:{},pendingDel:null};
+  var ui={status:'全部',cond:'',cat:'',tags:[],tagMode:'all',tagOpen:false,brand:'',sort:'new',flag:'',layout:(function(){try{return localStorage.getItem('babyWardrobe.layout')==='table'?'table':'cards'}catch(e){return 'cards'}})(),selMode:false,sel:{},batchDel:false,q:'',view:{},pendingDel:null};
   var $=function(id){return document.getElementById(id)};
 
   function migrate(o){
@@ -514,15 +549,25 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     return Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]||a.localeCompare(b)});
   }
   function renderTagBar(){
-    var scope=state.items.filter(function(i){return ui.status==='全部'?i.status!=='已售出':i.status===ui.status});
+    var scope=state.items.filter(function(i){return ui.status==='全部'?(i.status==='已到貨'||i.status==='待售出'):i.status===ui.status});
     var cnt={};allTags().forEach(function(t){cnt[t]=0});
     scope.forEach(function(i){(i.tags||[]).forEach(function(t){cnt[t]=(cnt[t]||0)+1})});
     var names=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]||a.localeCompare(b)});
     ui.tags=ui.tags.filter(function(t){return cnt[t]!==undefined});
-    var h=names.length?names.map(function(t){return '<button type="button" class="chip tagchip" data-tagf="'+esc(t)+'" aria-pressed="'+(ui.tags.indexOf(t)>=0)+'">#'+esc(t)+' '+cnt[t]+'</button>'}).join(''):'<span class="hint">還沒有標籤。編輯衣服時加上，或按右邊「管理」新增。</span>';
-    if(ui.tags.length>=2)h+='<button type="button" class="chip tagchip" data-tagmode="1" title="按一下切換">'+(ui.tagMode==='any'?'符合任一':'全部符合')+'</button>';
-    if(ui.tags.length)h+='<button type="button" class="chip tagchip" data-tagclear="1">清除標籤</button>';
+    var chip=function(t){return '<button type="button" class="chip tagchip" data-tagf="'+esc(t)+'" aria-pressed="'+(ui.tags.indexOf(t)>=0)+'">#'+esc(t)+' '+cnt[t]+'</button>'};
+    var h='';
+    if(ui.tagOpen){
+      h=names.length?names.map(chip).join(''):'<span class="hint">還沒有標籤。編輯衣服時加上，或按「管理標籤」新增。</span>';
+      if(ui.tags.length>=2)h+='<button type="button" class="chip tagchip" data-tagmode="1" title="按一下切換">'+(ui.tagMode==='any'?'符合任一':'全部符合')+'</button>';
+      if(ui.tags.length)h+='<button type="button" class="chip tagchip" data-tagclear="1">清除標籤</button>';
+      h+='<button type="button" class="chip tagchip" data-tagmanage="1">管理標籤</button>';
+    }else{
+      h=ui.tags.map(chip).join('');
+      if(ui.tags.length)h+='<button type="button" class="chip tagchip" data-tagclear="1">清除</button>';
+    }
     $('tagBar').innerHTML=h;
+    $('btnTagToggle').textContent='標籤'+(ui.tags.length?'（'+ui.tags.length+'）':'')+(ui.tagOpen?' ▴':' ▾');
+    $('btnTagToggle').setAttribute('aria-expanded',String(ui.tagOpen));
   }
   function bindTagSuggest(inp,box){
     var i=$(inp),b=$(box);if(!i||!b)return;
@@ -581,7 +626,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     if(cur&&list.indexOf(cur)<0){sel.value='';}
   }
   function renderFilters(){
-    var counts={全部:state.items.filter(function(i){return i.status!=='已售出'}).length};
+    var counts={全部:state.items.filter(function(i){return i.status==='已到貨'||i.status==='待售出'}).length};
     STATUS.forEach(function(s){counts[s]=state.items.filter(function(i){return i.status===s}).length});
     $('statusChips').innerHTML=['全部'].concat(STATUS).map(function(s){
       return '<button type="button" class="chip" data-status="'+s+'" aria-pressed="'+(ui.status===s)+'">'+s+' '+counts[s]+'</button>';
@@ -596,7 +641,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   function visible(){
     var q=ui.q.trim().toLowerCase();
     var list=state.items.filter(function(i){
-      if(ui.status==='全部'){if(i.status==='已售出')return false;}else if(i.status!==ui.status)return false;
+      if(ui.status==='全部'){if(i.status==='已售出')return false;if(i.status==='預購中'&&ui.flag!=='late'&&ui.flag!=='soon')return false;}else if(i.status!==ui.status)return false;
       if(ui.cond&&i.cond!==ui.cond)return false;
       if(ui.cat&&(i.cat||'未分類')!==ui.cat)return false;
       if(ui.tags.length){var hasT=ui.tags.map(function(t){return (i.tags||[]).indexOf(t)>=0});if(ui.tagMode==='any'?!hasT.some(Boolean):!hasT.every(Boolean))return false;}
@@ -619,7 +664,8 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
       if(ui.sort==='brand')return String(a.brand).localeCompare(String(b.brand));
       return idx[b.id]-idx[a.id];
     });
-    return list;
+    var withImg=[],noImg=[];list.forEach(function(i){(i.official||i.photo?withImg:noImg).push(i)});
+    return withImg.concat(noImg);
   }
 
   /* ---------- 畫面 ---------- */
@@ -662,8 +708,8 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   }
   function renderGrid(){
     var list=visible();
-    var soldN=state.items.filter(function(i){return i.status==='已售出'}).length,baseN=ui.status==='全部'?state.items.length-soldN:state.items.length;
-    $('count').textContent='顯示 '+list.length+' / '+baseN+' 件'+(ui.status==='全部'&&soldN?'・已售出 '+soldN+' 件請按上方「已售出」查看':'');updateFilterUI();
+    var soldN=state.items.filter(function(i){return i.status==='已售出'}).length,preN=state.items.filter(function(i){return i.status==='預購中'}).length,baseN=ui.status==='全部'?state.items.length-soldN-preN:state.items.filter(function(i){return i.status===ui.status}).length;
+    $('count').textContent='顯示 '+list.length+' / '+baseN+' 件'+(ui.status==='全部'&&(soldN||preN)?'・'+(preN?'預購中 '+preN+' 件':'')+(preN&&soldN?'、':'')+(soldN?'已售出 '+soldN+' 件':'')+'請按上方按鈕查看':'');updateFilterUI();
     var ss=$('soldSum');
     if(ui.status==='已售出'&&list.length){var sb=0,sg=0;list.forEach(function(i){sb+=Number(i.buy)||0;sg+=soldPrice(i)});var sd=sg-sb;ss.hidden=false;ss.innerHTML='已售出 '+list.length+' 件｜購入合計 '+money(sb)+'｜售出合計 '+money(sg)+'｜差額合計 <b class="'+(sd>=0?'gain':'loss')+'">'+(sd>0?'+':sd<0?'−':'±')+money(Math.abs(sd))+'</b>';}else ss.hidden=true;
     if(ui.selMode){var vs={};list.forEach(function(i){vs[i.id]=1});Object.keys(ui.sel).forEach(function(k){if(!vs[k])delete ui.sel[k]});setTimeout(updateBar,0);}
@@ -671,7 +717,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     $('grid').innerHTML=list.length?(ui.layout==='table'?tableHtml(list):list.map(cardHtml).join('')):'';
     hydrateDrive($('grid'));
     if(!list.length){
-      $('grid').innerHTML='<div class="emptybox" style="grid-column:1/-1">'+(state.items.length?(ui.status==='全部'?'沒有符合條件的衣服，換個篩選看看。已售出的衣服不會顯示在這裡，請按上方「已售出」。':'沒有符合條件的衣服，換個篩選看看。'):'衣櫃還是空的。按「新增衣服」記下第一件。')+'</div>';
+      $('grid').innerHTML='<div class="emptybox" style="grid-column:1/-1">'+(state.items.length?(ui.status==='全部'?'沒有符合條件的衣服，換個篩選看看。預購中和已售出的衣服不會顯示在這裡，請按上方「預購中」或「已售出」。':'沒有符合條件的衣服，換個篩選看看。'):'衣櫃還是空的。按「新增衣服」記下第一件。')+'</div>';
     }
   }
   function renderAll(){renderStats();renderFilters();renderGrid();updateBar();updateRemind()}
@@ -1638,7 +1684,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     info('檢查腳本版本…');
     fetch(c.url+(c.url.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(c.token)+'&_='+Date.now()).then(function(r){return r.json()}).then(function(j){
       if(!j||!j.ok)throw new Error(j&&j.error==='token'?'token':'check');
-      if(!/^drive-[23]$/.test(j.ver||'')){info('檢查結果：這個網址（腳本版本：'+(j.ver||'沒有版本標記')+'，需要 drive-2 或 drive-3）（結尾 …'+c.url.slice(-16)+'）的腳本沒有回傳版本標記。腳本回傳的欄位：'+Object.keys(j).join(', ')+'。請到 Apps Script「部署」→「管理部署作業」，看你要用的那個部署的網址結尾是不是和這裡一樣；不一樣的話，把正確網址貼進來。');return;}
+      if(!/^(drive-[23]|public-\d+)$/.test(j.ver||'')){info('檢查結果：這個網址（腳本版本：'+(j.ver||'沒有版本標記')+'，需要 drive-2 或 drive-3）（結尾 …'+c.url.slice(-16)+'）的腳本沒有回傳版本標記。腳本回傳的欄位：'+Object.keys(j).join(', ')+'。請到 Apps Script「部署」→「管理部署作業」，看你要用的那個部署的網址結尾是不是和這裡一樣；不一樣的話，把正確網址貼進來。');return;}
       driveTest2(info);
     }).catch(function(e){info('失敗：'+driveErrText(e))});
   }
@@ -1722,14 +1768,28 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   }
   var GAS_CODE=[
     "const SECRET = '請改成你自己的密碼';",
-    "const SHEET_ID = '1gB9oUBr_pCt3s62FFI0d4Qr7BPhpR24p2Am2RW2hNVo';",
-    "const SHEET = '完整更新_Alina衣櫥';",
+    "const SHEET_ID = '請貼上你的試算表ID';",
+    "const SHEET = '請改成你的工作表名稱';",
     "const FOLDER_ID = '';  // 照片資料夾 ID；留空會自動建立「寶寶衣櫃照片」資料夾（照片維持私人，不會公開）",
-    "const VERSION = 'drive-3';  // 版本標記，網頁用來確認你部署的是新版",
+    "const VERSION = 'public-1';  // 版本標記，網頁用來確認你部署的是新版",
     "function out(o){return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);}",
     "function getSheet(create){const ss = SpreadsheetApp.openById(SHEET_ID); return ss.getSheetByName(SHEET) || (create ? ss.insertSheet(SHEET) : null);}",
     "function readAll(sh){return sh ? sh.getDataRange().getValues() : [];}",
     "function hashOf(v){return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, JSON.stringify(v)));}",
+    "function publicItems(rows){",
+    "  if (!rows || rows.length < 2) return [];",
+    "  const H = rows[0].map(String), ix = function(n){ return H.indexOf(n); };",
+    "  const iB = ix('品牌'), iS = ix('尺寸'), iC = ix('衣況'), iP = ix('預計售價'), iT = ix('到貨狀況'), iO = ix('官方圖'), iF = ix('實拍圖');",
+    "  const res = [];",
+    "  rows.slice(1).forEach(function(r){",
+    "    const st = String(r[iT] || '');",
+    "    if (st !== '已到貨' && st !== '待售出') return;",
+    "    const plan = Number(String(r[iP] || '').replace(/[^\\d.]/g, '')) || 0;",
+    "    res.push({brand:String(r[iB] || ''), size:String(r[iS] || ''), cond:String(r[iC] || ''), plan:(st === '待售出' ? plan : 0), official:String(r[iO] || ''), photo:String(r[iF] || '')});",
+    "  });",
+    "  return res;",
+    "}",
+    "function driveIdOf(u){ const m = /[?&]id=([\\w-]{10,})/.exec(u) || /\\/d\\/([\\w-]{10,})/.exec(u); return m ? m[1] : ''; }",
     "function getFolder(){",
     "  if (FOLDER_ID) return DriveApp.getFolderById(FOLDER_ID);",
     "  const it = DriveApp.getFoldersByName('寶寶衣櫃照片');",
@@ -1779,7 +1839,16 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     "  return out({ok:true, count:n-1, hash:hashOf(readAll(sh))});",
     "}",
     "function doGet(e){",
-    "  if (e.parameter.token !== SECRET) return out({ok:false, error:'token'});",
+    "  const p = e.parameter || {};",
+    "  if (p.mode === 'public') { const items = publicItems(readAll(getSheet(false))); return out({ok:true, count:items.length, items:items, ver:VERSION}); }",
+    "  if (p.mode === 'pubimg') {",
+    "    const items = publicItems(readAll(getSheet(false)));",
+    "    const allowed = items.some(function(it){ return driveIdOf(it.photo) === p.id || driveIdOf(it.official) === p.id; });",
+    "    if (!allowed) return out({ok:false, error:'forbidden'});",
+    "    const b = DriveApp.getFileById(p.id).getBlob();",
+    "    return out({ok:true, data:'data:' + b.getContentType() + ';base64,' + Utilities.base64Encode(b.getBytes())});",
+    "  }",
+    "  if (p.token !== SECRET) return out({ok:false, error:'token'});",
     "  const rows = readAll(getSheet(false));",
     "  return out({ok:true, rows:rows, hash:hashOf(rows), ver:VERSION});",
     "}"
@@ -1788,7 +1857,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     var c=syncCfg(),pulled=null;
     var last=c.last?dateText(c.last)+' '+('0'+new Date(c.last).getHours()).slice(-2)+':'+('0'+new Date(c.last).getMinutes()).slice(-2):'尚未同步';
     openModal('同步 Google 試算表',
-      '<p class="hint" style="grid-column:1/-1;margin:0">把你的 Google 試算表（預設是「Alina衣櫥更新列表」的「完整更新_Alina衣櫥」工作表）當作主檔。選「雙向」時，開啟網頁或切回網頁會自動讀取試算表的最新內容，在網頁修改後也會自動寫回試算表。你可以直接在試算表（或手機的 Google 試算表 App）編輯，網頁會跟著更新。</p>'+
+      '<p class="hint" style="grid-column:1/-1;margin:0">把你的 Google 試算表當作主檔。選「雙向」時，開啟網頁或切回網頁會自動讀取試算表的最新內容，在網頁修改後也會自動寫回試算表。你可以直接在試算表（或手機的 Google 試算表 App）編輯，網頁會跟著更新。</p>'+
       '<details style="grid-column:1/-1"'+(c.url?'':' open')+'><summary style="cursor:pointer;font-weight:700">第一次設定（約 10 分鐘，只做一次）</summary>'+
       '<ol style="margin:8px 0 0;padding-left:20px;font-size:13px;line-height:1.8">'+
       '<li>到 <b>script.google.com</b> 按「新專案」（或在試算表選「擴充功能」→「Apps Script」），用你的 Google 帳號登入。</li>'+
@@ -1801,12 +1870,15 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
       '<label class="f full">網頁應用程式網址<input type="url" id="syUrl" value="'+esc(c.url)+'" placeholder="https://script.google.com/macros/s/…/exec"></label>'+
       '<label class="f">密碼<input type="text" id="syToken" value="'+esc(c.token)+'" autocomplete="off"></label>'+
       '<label class="f">同步方式<select id="syMode"><option value="off"'+(c.mode==='off'?' selected':'')+'>關閉（手動）</option><option value="up"'+(c.mode==='up'?' selected':'')+'>只上傳：網頁修改後寫入試算表</option><option value="both"'+(c.mode==='both'?' selected':'')+'>雙向：以試算表為主檔</option></select></label>'+
-      '<ul class="preview" id="syDiff" hidden></ul>'+'<label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="syDrive" style="width:auto"'+(c.drive?' checked':'')+'><span style="color:var(--ink)">新上傳的照片自動存到 Google 雲端硬碟，並把連結寫進試算表（需先更新 Apps Script 並重新授權）</span></label>'+'<p class="hint" id="syInfo" style="grid-column:1/-1;margin:0" aria-live="polite">上次同步：'+last+(c.lastCheck?'；上次檢查試算表：'+new Date(c.lastCheck).toLocaleTimeString('zh-TW')+'（'+esc(c.lastResult||'')+'）':'')+(c.err?'；'+esc(c.err):'')+'</p>'+
+      '<ul class="preview" id="syDiff" hidden></ul>'+'<label class="f full" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="syDrive" style="width:auto"'+(c.drive?' checked':'')+'><span style="color:var(--ink)">新上傳的照片自動存到 Google 雲端硬碟，並把連結寫進試算表（需先更新 Apps Script 並重新授權）</span></label>'+'<label class="f full">貼上設定連結（在電腦產生的那一條，可以直接貼這裡套用）<input type="text" id="syPaste" placeholder="https://…#cfg=…"></label>'+'<div id="syLinkWrap" hidden style="grid-column:1/-1"><textarea id="syLinkBox" rows="3" readonly style="width:100%;font-size:11px" aria-label="手機設定連結"></textarea><button class="btn sm" type="button" id="syLinkCopy" style="margin-top:6px">複製連結</button></div>'+'<p class="hint" id="syInfo" style="grid-column:1/-1;margin:0" aria-live="polite">上次同步：'+last+(c.lastCheck?'；上次檢查試算表：'+new Date(c.lastCheck).toLocaleTimeString('zh-TW')+'（'+esc(c.lastResult||'')+'）':'')+(c.err?'；'+esc(c.err):'')+'</p>'+
       (c.mode==='up'?'<p class="po-note" style="grid-column:1/-1">目前同步方式是「只上傳」：網頁的修改會寫進試算表，但在試算表改的內容<b>不會</b>回到網頁。要雙向同步，請把上面的「同步方式」改成「雙向：以試算表為主檔」，再按「儲存設定」。</p>':'')+(c.conflict?'<p class="po-note" style="grid-column:1/-1">試算表在別處被修改過，網頁的修改還沒上傳。請選擇：按「立即讀取」改用試算表的內容（網頁未上傳的修改會被取代），或按「用網頁覆蓋試算表」。</p>':'')+
-      '<div class="po-row"><button class="btn sm" type="button" id="sySave">儲存設定</button><button class="btn sm" type="button" id="syTest">測試連線</button><button class="btn sm primary" type="button" id="syNow">立即上傳</button><button class="btn sm" type="button" id="syPull">立即讀取…</button><button class="btn sm" type="button" id="syMig">把瀏覽器內的照片搬到雲端硬碟</button><button class="btn sm" type="button" id="syDriveTest">測試雲端硬碟上傳</button>'+(c.conflict?'<button class="btn sm danger" type="button" id="syForce">用網頁覆蓋試算表</button>':'')+'</div>'+
+      '<div class="po-row"><button class="btn sm" type="button" id="sySave">儲存設定</button><button class="btn sm" type="button" id="syTest">測試連線</button><button class="btn sm primary" type="button" id="syNow">立即上傳</button><button class="btn sm" type="button" id="syPull">立即讀取…</button><button class="btn sm" type="button" id="syMig">把瀏覽器內的照片搬到雲端硬碟</button><button class="btn sm" type="button" id="syDriveTest">測試雲端硬碟上傳</button><button class="btn sm" type="button" id="syLink">產生手機設定連結</button>'+(c.conflict?'<button class="btn sm danger" type="button" id="syForce">用網頁覆蓋試算表</button>':'')+'</div>'+
       '<p class="hint" style="grid-column:1/-1;margin:0">提醒：雙向模式以「編號」欄對應每件衣服，請不要刪除或更改試算表的編號欄；新增衣服時編號可以留空，網頁會自動補上。試算表中被刪除的列，網頁也會移除。照片不會寫進試算表（只有圖片檔案路徑）。此功能只能在桌面的 index.html 或自己架的網站使用，預覽頁不行。</p>',
       '<button class="btn primary" type="button" id="syDone">完成</button>');
     $('syDone').onclick=closeModal;
+    $('syPaste').oninput=function(){var o=applyCfgText(this.value);if(o){$('syUrl').value=o.u;$('syToken').value=o.t||'';$('syMode').value=o.m||'both';$('syDrive').checked=!!o.d;updateSyncBtn();info('已套用設定連結。接著按「立即讀取…」把試算表的資料讀進來。');}};
+    $('syLink').onclick=function(){var x=cfgFromForm();syncSet(x);if(!x.url){info('請先貼上網頁應用程式網址並儲存設定');return;}if(location.protocol==='file:'){info('這個功能要在放到網路上的網址（例如 GitHub Pages）裡使用，直接開檔案的連結手機打不開。');return;}$('syLinkBox').value=makeCfgLink();$('syLinkWrap').hidden=false;info('把這條連結傳到手機（例如用 LINE 傳給自己），用手機打開並「加到主畫面」，之後每次開啟都會自動帶入網址與密碼。連結裡含有你的密碼，請不要分享給別人。');};
+    $('syLinkCopy').onclick=function(){var ta=$('syLinkBox');ta.select();if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(ta.value).then(function(){toast('已複製連結')},function(){toast('請手動複製已選取的文字')});else toast('請手動複製已選取的文字');};
     $('syDriveTest').onclick=function(){var x=cfgFromForm();syncSet(x);driveTest(info);};
     $('syMig').onclick=function(){var x=cfgFromForm();syncSet(x);if(!x.url||!x.drive){info('請先勾選「新上傳的照片自動存到 Google 雲端硬碟」並儲存設定');return;}migratePhotos(info);};
     function info(t){$('syInfo').textContent=t}
@@ -1823,7 +1895,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
       info('連線中…');
       fetch(x.url+(x.url.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(x.token)+'&_='+Date.now()).then(function(r){return r.json()}).then(function(j){
         if(!j||!j.ok)throw new Error(syncErr(j));
-        info('連線成功。試算表目前有 '+Math.max(0,(j.rows||[]).length-1)+' 列資料。'+(j.ver==='drive-3'?'腳本版本：drive-3（新版，照片維持私人）。':j.ver==='drive-2'?'腳本版本：drive-2（可用；新上傳的照片會是「知道連結可檢視」）。':'腳本版本：'+(j.ver||'無')+'，太舊了，請重新複製程式碼並部署新版本。')+'｜目前使用的網址結尾：…'+x.url.slice(-16)+'｜腳本回傳的欄位：'+Object.keys(j).join(', '));
+        info('連線成功。試算表目前有 '+Math.max(0,(j.rows||[]).length-1)+' 列資料。'+(/^public-/.test(j.ver||'')?'腳本版本：'+j.ver+'（最新，支援公開分享連結，照片維持私人）。':j.ver==='drive-3'?'腳本版本：drive-3（可用，但不支援公開分享連結，請更新）。':j.ver==='drive-2'?'腳本版本：drive-2（可用；新上傳的照片會是「知道連結可檢視」）。':'腳本版本：'+(j.ver||'無')+'，太舊了，請重新複製程式碼並部署新版本。')+'｜目前使用的網址結尾：…'+x.url.slice(-16)+'｜腳本回傳的欄位：'+Object.keys(j).join(', '));
       }).catch(function(e){info('連線失敗：'+(e&&e.message==='密碼不符'?'密碼不符':'請檢查網址是否為 /exec 結尾、部署存取權是否為「所有人」；若剛更新過程式碼，要重新部署新版本'))});
     };
     $('syNow').onclick=function(){
@@ -1965,6 +2037,144 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
       if(!im){$('edWarn').textContent='讀不到這張照片。';$('edWarn').hidden=false;return;}
       E.img=im;rotated();draw();
     });
+  }
+  /* ---------- 手機設定連結（免每次重新輸入網址與密碼）---------- */
+  function b64enc(o){return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+  function b64dec(s){s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return JSON.parse(decodeURIComponent(escape(atob(s))))}
+  function applyHashCfg(){
+    var m=/[#&]cfg=([A-Za-z0-9_\-]+)/.exec(location.hash||'');if(!m)return;
+    try{
+      var o=b64dec(m[1]);if(!o||!o.u)return;
+      var c=syncCfg(),mode=o.m||'both';
+      if(c.url!==o.u||c.token!==(o.t||'')||c.mode!==mode||c.drive!==!!o.d){c.url=o.u;c.token=o.t||'';c.mode=mode;c.drive=!!o.d;syncSet(c);}
+    }catch(e){}
+  }
+  function isStandalone(){try{return window.navigator.standalone===true||(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)}catch(e){return false}}
+  function setupAppMeta(){
+    try{
+      var c=document.createElement('canvas');c.width=c.height=180;var x=c.getContext('2d');
+      var g=x.createLinearGradient(0,0,180,180);g.addColorStop(0,'#00d6f2');g.addColorStop(1,'#ff4c93');x.fillStyle=g;x.fillRect(0,0,180,180);
+      x.fillStyle='#fff';x.font='bold 74px "Huninn","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';x.textAlign='center';x.textBaseline='middle';
+      x.shadowColor='rgba(0,0,0,.3)';x.shadowBlur=6;x.fillText('衣櫃',90,92);
+      var add=function(tag,attrs){var e=document.createElement(tag);Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k])});document.head.appendChild(e)};
+      add('link',{rel:'apple-touch-icon',href:c.toDataURL('image/png')});
+      add('meta',{name:'apple-mobile-web-app-capable',content:'yes'});
+      add('meta',{name:'mobile-web-app-capable',content:'yes'});
+      add('meta',{name:'apple-mobile-web-app-title',content:'寶寶衣櫃'});
+      add('meta',{name:'theme-color',content:'#00d6f2'});
+    }catch(e){}
+  }
+  function updateA2hs(){
+    var box=$('a2hs');if(!box)return;
+    var show=/[#&]cfg=/.test(location.hash||'')&&!isStandalone();
+    try{if(localStorage.getItem('babyWardrobe.a2hsDone')==='1')show=false}catch(e){}
+    box.hidden=!show;
+  }
+  function applyCfgText(text){
+    var m=/cfg=([A-Za-z0-9_\-]+)/.exec(text||'');if(!m)return false;
+    try{
+      var o=b64dec(m[1]);if(!o||!o.u)return false;
+      var c=syncCfg();c.url=o.u;c.token=o.t||'';c.mode=o.m||'both';c.drive=!!o.d;syncSet(c);return o;
+    }catch(e){return false}
+  }
+  function makeCfgLink(){
+    var c=syncCfg();if(!c.url)return '';
+    return location.href.split('#')[0]+'#cfg='+b64enc({u:c.url,t:c.token,m:c.mode==='off'?'both':c.mode,d:!!c.drive});
+  }
+  /* ---------- 公開檢視（對外分享）---------- */
+  var PUB=null,pubItems=[],pubQ=[],pubRun=0;
+  function pubParse(){var m=/[#&]pub=([A-Za-z0-9_\-]+)/.exec(location.hash||'');if(!m)return null;try{var o=b64dec(m[1]);return o&&o.u?o:null}catch(e){return null}}
+  function pubUrl(extra){return PUB.u+(PUB.u.indexOf('?')<0?'?':'&')+extra}
+  function pubNext(){
+    while(pubRun<3&&pubQ.length){
+      var job=pubQ.shift();pubRun++;
+      (function(j){
+        fetch(pubUrl('mode=pubimg&id='+encodeURIComponent(j.id)+'&_='+Date.now())).then(function(r){return r.json()}).then(function(res){
+          if(res&&res.ok&&res.data){driveCache[j.id]=res.data;idbSet(j.id,res.data);j.cb(res.data)}else j.cb(null);
+        }).catch(function(){j.cb(null)}).then(function(){pubRun--;pubNext()});
+      })(job);
+    }
+  }
+  function pubImgGet(id,cb){
+    if(driveCache[id])return cb(driveCache[id]);
+    idbGet(id,function(d){if(d){driveCache[id]=d;return cb(d)}pubQ.push({id:id,cb:cb});pubNext()});
+  }
+  function pubCardHtml(it){
+    var url=it.photo||it.official,img;
+    if(!url)img='<div class="pubph">尚無照片</div>';
+    else if(/^https:\/\/(drive\.google\.com|lh3\.googleusercontent\.com)\//.test(url)&&driveId(url))img='<img src="'+BLANKGIF+'" data-pubdrive="'+esc(driveId(url))+'" alt="">';
+    else img='<img src="'+esc(url)+'" alt="" loading="lazy">';
+    return '<article class="card"><div class="pic">'+img+'</div><div class="body"><div class="brand">'+esc(it.brand||'未標示品牌')+'</div>'+
+      '<div class="pills"><span class="pill size">'+esc(it.size||'—')+'</span>'+(it.cond?'<span class="pill '+(it.cond==='借出中'?'lent':'cond')+'">'+esc(it.cond)+'</span>':'')+'</div>'+
+      (it.plan>0?'<div class="price"><span>售價 <b>'+money(it.plan)+'</b></span></div>':'')+'</div></article>';
+  }
+  function pubFill(){
+    var bs={},cs={};pubItems.forEach(function(i){if(i.brand)bs[i.brand]=1;if(i.cond)cs[i.cond]=1});
+    var b0=$('pubBrand').value,c0=$('pubCond').value;
+    $('pubBrand').innerHTML='<option value="">全部品牌</option>'+Object.keys(bs).sort().map(function(v){return '<option'+(v===b0?' selected':'')+'>'+esc(v)+'</option>'}).join('');
+    $('pubCond').innerHTML='<option value="">全部衣況</option>'+Object.keys(cs).map(function(v){return '<option'+(v===c0?' selected':'')+'>'+esc(v)+'</option>'}).join('');
+  }
+  function pubRender(){
+    var q=$('pubQ').value.trim().toLowerCase(),b=$('pubBrand').value,c=$('pubCond').value;
+    var list=pubItems.filter(function(i){
+      if(b&&i.brand!==b)return false;if(c&&i.cond!==c)return false;
+      if(q&&((i.brand||'')+' '+(i.size||'')).toLowerCase().indexOf(q)<0)return false;return true;
+    });
+    var a=[],z=[];list.forEach(function(i){(i.photo||i.official?a:z).push(i)});list=a.concat(z);
+    $('pubSub').textContent='現有 '+pubItems.length+' 件'+(list.length!==pubItems.length?'・符合 '+list.length+' 件':'');
+    $('pubGrid').innerHTML=list.length?list.map(pubCardHtml).join(''):'<div class="emptybox" style="grid-column:1/-1">沒有符合的衣服。</div>';
+    Array.prototype.forEach.call($('pubGrid').querySelectorAll('img[data-pubdrive]'),function(img){
+      pubImgGet(img.dataset.pubdrive,function(d){if(d)img.src=d;else{var p=document.createElement('div');p.className='pubph';p.textContent='照片無法載入';img.replaceWith(p)}});
+    });
+  }
+  function pubLoad(){
+    try{var c=JSON.parse(localStorage.getItem('babyWardrobe.pubcache')||'null');if(c&&c.u===PUB.u&&c.items){pubItems=c.items;pubFill();pubRender();}}catch(e){}
+    fetch(pubUrl('mode=public&_='+Date.now())).then(function(r){return r.json()}).then(function(j){
+      if(!j||!j.ok||!j.items)throw new Error(j&&j.error==='token'?'old':'bad');
+      pubItems=j.items;try{localStorage.setItem('babyWardrobe.pubcache',JSON.stringify({u:PUB.u,items:pubItems}))}catch(e){}
+      pubFill();pubRender();
+    }).catch(function(e){
+      if(!pubItems.length)$('pubGrid').innerHTML='<div class="emptybox" style="grid-column:1/-1">'+(e&&e.message==='old'?'這個分享連結的後端還沒更新（Apps Script 需要新版）。請聯絡分享者。':'讀取失敗，請稍後再試。')+'</div>';
+    });
+  }
+  function pubUnlock(pw){
+    var c=syncCfg();c.url=PUB.u;c.token=pw;c.mode='both';syncSet(c);
+    try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}
+    location.reload();
+  }
+  function pubEdit(){
+    var c=syncCfg();
+    if(c.url===PUB.u&&c.token){pubUnlock(c.token);return;}
+    openModal('開啟編輯功能','<label class="f full">密碼<input type="password" id="pubPw" autocomplete="current-password"></label><p class="hint" id="pubPwInfo" style="grid-column:1/-1;margin:0">輸入分享者設定的密碼後，才會看到完整資料並可以編輯。</p>','<button class="btn" type="button" id="pubPwNo">取消</button><button class="btn primary" type="button" id="pubPwGo">開啟編輯</button>');
+    $('pubPwNo').onclick=closeModal;
+    function go(){
+      var pw=$('pubPw').value;if(!pw)return;$('pubPwInfo').textContent='確認中…';
+      fetch(pubUrl('token='+encodeURIComponent(pw)+'&_='+Date.now())).then(function(r){return r.json()}).then(function(j){
+        if(j&&j.ok)pubUnlock(pw);else $('pubPwInfo').textContent='密碼不正確。';
+      }).catch(function(){$('pubPwInfo').textContent='連線失敗，請稍後再試。'});
+    }
+    $('pubPwGo').onclick=go;$('pubPw').onkeydown=function(e){if(e.key==='Enter')go()};
+    setTimeout(function(){var e=$('pubPw');if(e)e.focus()},30);
+  }
+  function pubStart(){
+    document.body.classList.add('pub');$('pubApp').hidden=false;
+    $('pubQ').oninput=pubRender;$('pubBrand').onchange=pubRender;$('pubCond').onchange=pubRender;$('pubEdit').onclick=pubEdit;
+    pubLoad();
+    document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')pubLoad()});
+  }
+  function openShare(){
+    var c=syncCfg();
+    if(!c.url){toast('請先在「同步試算表」連到你的試算表');return;}
+    if(location.protocol==='file:'){toast('請在放到網路上的網址（例如 GitHub Pages）開啟，才能產生可分享的連結');return;}
+    var link=location.href.split('#')[0]+'#pub='+b64enc({u:c.url});
+    openModal('分享公開連結',
+      '<p class="hint" style="grid-column:1/-1;margin:0">把這條連結傳給別人，對方打開只會看到：<b>現有件數、品牌、尺寸、照片、衣況、預計售價</b>。購入價、已付款、預購待付、售出收入、名稱、標籤、備註、借給誰、已售出與預購中的衣服都看不到。對方按「編輯」並輸入密碼，才會看到完整資料。</p>'+
+      '<textarea id="shLink" rows="4" readonly style="grid-column:1/-1;width:100%;font-size:11px" aria-label="公開連結">'+esc(link)+'</textarea>'+
+      '<button class="btn sm" type="button" id="shCopy">複製連結</button>'+
+      '<p class="hint" style="grid-column:1/-1;margin:0">需要先把 Apps Script 換成新版（版本 public-1），並重新部署成新版本，公開連結才讀得到資料。連結內有你的 Apps Script 網址，請搭配「不容易猜到的密碼」使用。</p>',
+      '<button class="btn primary" type="button" id="shDone">完成</button>');
+    $('shDone').onclick=closeModal;
+    $('shCopy').onclick=function(){var ta=$('shLink');ta.select();if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(ta.value).then(function(){toast('已複製連結')},function(){toast('請手動複製已選取的文字')});else toast('請手動複製已選取的文字')};
   }
   /* ---------- 撤銷 ---------- */
   function snap(){ui.undoSnap=JSON.stringify(state)}
@@ -2160,8 +2370,14 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   $('btnSale').onclick=openSale;
   $('btnStats').onclick=openStats;
   $('btnSync').onclick=openSync;
+  PUB=pubParse();
+  if(!PUB)applyHashCfg();
+  setupAppMeta();
+  $('a2hsOk').onclick=function(){try{localStorage.setItem('babyWardrobe.a2hsDone','1')}catch(e){}updateA2hs()};
+  if(PUB)pubStart();else updateA2hs();
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
   updateSyncBtn();
-  startupSync();
+  if(!PUB)startupSync();
   document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&Date.now()-lastPull>15000)startupSync(true)});
   window.addEventListener('focus',function(){if(Date.now()-lastPull>15000)startupSync(true)});
   setInterval(function(){if(document.visibilityState==='visible'&&Date.now()-lastPull>20000)startupSync(true)},30000);
@@ -2178,6 +2394,7 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
   $('q').oninput=function(){ui.q=this.value;renderGrid()};
   $('tagBar').onclick=function(e){
     var b=e.target.closest('button');if(!b)return;
+    if(b.dataset.tagmanage){openTags();return;}
     if(b.dataset.tagclear){ui.tags=[];}
     else if(b.dataset.tagmode){ui.tagMode=ui.tagMode==='any'?'all':'any';}
     else if(b.dataset.tagf){var t=b.dataset.tagf,k=ui.tags.indexOf(t);if(k>=0)ui.tags.splice(k,1);else ui.tags.push(t);}
@@ -2185,6 +2402,12 @@ input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--p
     renderGrid();renderTagBar();
   };
   $('btnTags').onclick=openTags;
+  $('btnShare').onclick=openShare;
+  $('btnTagToggle').onclick=function(){ui.tagOpen=!ui.tagOpen;renderTagBar()};
+  $('btnMore').onclick=function(e){e.stopPropagation();var m=$('moreMenu');m.hidden=!m.hidden;this.setAttribute('aria-expanded',String(!m.hidden))};
+  $('moreMenu').onclick=function(e){if(e.target.closest('button'))setTimeout(function(){$('moreMenu').hidden=true;$('btnMore').setAttribute('aria-expanded','false')},0)};
+  document.addEventListener('click',function(e){if(!e.target.closest('.menuwrap')){$('moreMenu').hidden=true;$('btnMore').setAttribute('aria-expanded','false')}});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'){$('moreMenu').hidden=true}});
   $('statusChips').onclick=function(e){var b=e.target.closest('[data-status]');if(!b)return;ui.status=b.dataset.status;renderAll()};
   [['fCond','cond'],['fCat','cat'],['fBrand','brand'],['fFlag','flag'],['fSort','sort']].forEach(function(p){
     $(p[0]).onchange=function(){ui[p[1]]=this.value;renderGrid()};
