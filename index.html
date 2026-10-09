@@ -1429,6 +1429,24 @@ body.pub .pic{position:relative}
   function poFile(P,it){
     return ((P.brand?P.brand+'_':'')+P.name).replace(/[\\\/:*?"<>|\s]+/g,'_')+(it&&it.id?'_'+it.id:'')+'_販售圖.png';
   }
+  function isMobileUA(){return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&/Macintosh/.test(navigator.userAgent))}
+  /* 手機：用系統分享表單（可直接「儲存影像」到相簿）；不支援時顯示圖片讓人長按儲存 */
+  function poShowImage(blob){
+    var old=document.getElementById('poImgView');if(old)old.remove();
+    var url=URL.createObjectURL(blob),w=document.createElement('div');w.id='poImgView';
+    w.style.cssText='position:fixed;inset:0;z-index:99;background:rgba(0,0,0,.82);display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px;overflow:auto';
+    w.innerHTML='<p style="color:#fff;margin:0;font-size:15px;text-align:center;line-height:1.6"><b>長按下面的圖片</b>，選「儲存到相簿」或「下載圖片」</p><img alt="販售圖" style="max-width:100%;height:auto;border-radius:12px;background:#fff"><button type="button" class="btn primary">關閉</button>';
+    w.querySelector('img').src=url;w.querySelector('button').onclick=function(){w.remove()};
+    document.body.appendChild(w);
+  }
+  function poSaveMobile(blob,fname){
+    var file=null;try{file=new File([blob],fname,{type:'image/png'})}catch(e){}
+    if(file&&navigator.canShare&&navigator.share&&navigator.canShare({files:[file]})){
+      navigator.share({files:[file]}).catch(function(e){if(!e||e.name!=='AbortError')poShowImage(blob)});
+      return;
+    }
+    poShowImage(blob);
+  }
   function poSave(blob,fname,done){
     function anchor(){
       var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();a.remove();
@@ -1500,7 +1518,7 @@ body.pub .pic{position:relative}
       '<div class="po-presets" id="poPresets">'+Object.keys(PO_PRESETS).map(function(k){return '<button type="button" class="chip" data-pre="'+k+'" aria-pressed="'+(k==='原圖')+'">'+k+'</button>'}).join('')+'</div>'+
       sliders;
     openModal('製作販售圖',body,
-      '<button class="btn" type="button" id="poReset">重設美化</button><button class="btn" type="button" id="poSavePhoto">美化後存為實拍圖</button><button class="btn primary" type="button" id="poDl">下載販售圖 PNG</button>');
+      '<button class="btn" type="button" id="poReset">重設美化</button><button class="btn" type="button" id="poSavePhoto">美化後存為實拍圖</button><button class="btn primary" type="button" id="poDl">'+(isMobileUA()?'儲存販售圖到相簿':'下載販售圖 PNG')+'</button>');
     var cv=$('poCv'),raf=0,base=document.createElement('canvas');
     function srcList(){
       var a=[];if(it.photo)a.push(['photo','實拍圖']);if(it.official)a.push(['official','官方圖']);a.push(['ph','示意圖']);if(P.upload)a.push(['upload','從裝置選的照片']);
@@ -1558,6 +1576,7 @@ body.pub .pic{position:relative}
       draw();poCfgSave(P);
       try{cv.toBlob(function(blob){
         if(!blob){$('poWarn').textContent='無法匯出：這張照片來自外部或本機檔案，瀏覽器擋住了。請按「從裝置選照片」選同一張照片後再下載。';$('poWarn').hidden=false;return;}
+        if(isMobileUA()&&!(window.claude&&window.claude.use)){poSaveMobile(blob,poFile(P,null));return;}
         poSave(blob,poFile(P,null),function(ok){if(ok)toast('已送出下載')});
       },'image/png')}catch(e){$('poWarn').textContent='無法匯出：請按「從裝置選照片」選同一張照片後再下載。';$('poWarn').hidden=false;}
     };
