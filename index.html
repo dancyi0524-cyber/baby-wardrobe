@@ -383,6 +383,8 @@ body.pub .pic{position:relative}
       <div class="menuwrap">
         <button class="btn" id="btnMore" type="button" aria-haspopup="menu" aria-expanded="false">更多 ▾</button>
         <div class="menu" id="moreMenu" role="menu" hidden>
+          <button class="mi" id="btnQuick" type="button">快速新增</button>
+          <button class="mi" id="btnBulkPhoto" type="button">批次上傳照片</button>
           <button class="mi" id="btnOrder" type="button">貼上訂單</button>
           <button class="mi" id="btnBatch" type="button">批次編輯</button>
           <button class="mi" id="btnSale" type="button">販售包</button>
@@ -1871,7 +1873,7 @@ body.pub .pic{position:relative}
     "const SHEET_ID = '請貼上你的試算表ID';",
     "const SHEET = '請改成你的工作表名稱';",
     "const FOLDER_ID = '';  // 照片資料夾 ID；留空會自動建立「寶寶衣櫃照片」資料夾（照片維持私人，不會公開）",
-    "const VERSION = 'public-3';  // 版本標記，網頁用來確認你部署的是新版",
+    "const VERSION = 'public-4';  // 版本標記，網頁用來確認你部署的是新版",
     "function out(o){return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);}",
     "function getSheet(create){const ss = SpreadsheetApp.openById(SHEET_ID); return ss.getSheetByName(SHEET) || (create ? ss.insertSheet(SHEET) : null);}",
     "function readAll(sh){return sh ? sh.getDataRange().getValues() : [];}",
@@ -1899,6 +1901,16 @@ body.pub .pic{position:relative}
     "  return it.hasNext() ? it.next() : DriveApp.createFolder('寶寶衣櫃照片');",
     "}",
     "// 保留你在試算表自己調整的欄位順序，以及你自己加的欄位",
+    "// 每天第一次寫入前，自動把目前的內容複製成隱藏的「自動備份_日期」工作表，只保留最近 7 份",
+    "function autoBackup(sh){",
+    "  const ss = sh.getParent(), name = '自動備份_' + Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM-dd');",
+    "  if (ss.getSheetByName(name) || sh.getLastRow() < 2) return;",
+    "  const c = sh.copyTo(ss); c.setName(name); c.hideSheet();",
+    "  ss.setActiveSheet(sh);",
+    "  ss.getSheets().filter(function(s){ return s.getName().indexOf('自動備份_') === 0; })",
+    "    .sort(function(a, b){ return a.getName() < b.getName() ? 1 : -1; })",
+    "    .slice(7).forEach(function(s){ ss.deleteSheet(s); });",
+    "}",
     "function mergeRows(cur, inc){",
     "  if (!cur || cur.length < 1 || !cur[0].length) return inc;",
     "  const H0 = cur[0].map(String); while (H0.length && H0[H0.length-1] === '') H0.pop();",
@@ -1932,6 +1944,7 @@ body.pub .pic{position:relative}
     "  const cur = readAll(sh);",
     "  if (cur.length > 1 && !d.force && d.baseHash !== hashOf(cur)) return out({ok:false, error:'conflict', hash:hashOf(cur)});",
     "  const rows = mergeRows(cur, d.rows);",
+    "  try { autoBackup(sh); } catch (err) {}",
     "  sh.clearContents();",
     "  const n = rows.length, m = rows[0].length;",
     "  const textCols = ['尺寸', '預計到貨日', '購入日期', '售出日期', '上架日期'];",
@@ -2033,6 +2046,105 @@ body.pub .pic{position:relative}
         $('syDiff').hidden=!sd.lines.length;$('syDiff').innerHTML=sd.lines.slice(0,60).map(function(l){return '<li>'+esc(l)+'</li>'}).join('')+(sd.lines.length>60?'<li>…還有 '+(sd.lines.length-60)+' 件</li>':'');
         $('syPull').textContent='確定套用';$('syPull').classList.add('danger');
       }).catch(function(e){info('讀取失敗：'+(e&&e.message||'請檢查設定'))});
+    };
+  }
+  /* ---------- 快速新增／批次上傳照片 ---------- */
+  function storePhoto(data,name){
+    if(driveOn())return uploadPhoto(data,name).then(function(u){return u},function(){return data});
+    return Promise.resolve(data);
+  }
+  function brandOptions(){
+    var seen={};state.items.forEach(function(i){if(i.brand)seen[i.brand]=(seen[i.brand]||0)+1});
+    return Object.keys(seen).sort(function(a,b){return seen[b]-seen[a]}).map(function(b){return '<option value="'+esc(b)+'">'}).join('');
+  }
+  var quickLast={brand:'',size:'',status:'已到貨'};
+  function openQuick(){
+    var photoP=null,photoUrl='';
+    openModal('快速新增',
+      '<label class="f full">拍照或選照片（可不填）<input type="file" id="qkFile" accept="image/*"></label><div id="qkThumb" class="full" style="min-height:0"></div>'+
+      '<label class="f">品牌<input type="text" id="qkBrand" list="qkBrands" autocomplete="off" value="'+esc(quickLast.brand)+'"></label><datalist id="qkBrands">'+brandOptions()+'</datalist>'+
+      '<label class="f">尺寸<input type="text" id="qkSize" value="'+esc(quickLast.size)+'" placeholder="例：80、18M"></label>'+
+      '<label class="f">購入價（NT$）<input type="number" id="qkBuy" min="0" inputmode="numeric"></label>'+
+      '<label class="f">預計售價（NT$）<input type="number" id="qkPlan" min="0" inputmode="numeric"></label>'+
+      '<label class="f full">名稱（不填會用「品牌＋尺寸」）<input type="text" id="qkName"></label>'+
+      '<label class="f">到貨狀況<select id="qkStatus">'+optList(['已到貨','預購中','待售出'],quickLast.status)+'</select></label>'+
+      '<p class="hint" id="qkInfo" style="grid-column:1/-1;margin:0">其他欄位（分類、標籤、衣況…）之後再補就好。</p>',
+      '<button class="btn" type="button" id="qkX">取消</button><button class="btn" type="button" id="qkMore">存檔並繼續新增</button><button class="btn primary" type="button" id="qkOk">存檔</button>');
+    $('qkX').onclick=closeModal;
+    $('qkFile').onchange=function(){
+      var f=this.files[0];if(!f)return;
+      $('qkInfo').textContent='處理照片中…';photoUrl='';
+      readImage(f,1200,function(d){
+        if(!d){$('qkInfo').textContent='這張照片無法讀取，請換一張。';return;}
+        $('qkThumb').innerHTML='<img src="'+d+'" alt="" style="max-height:160px;border-radius:12px;border:2px solid var(--ol)">';
+        photoP=storePhoto(d,'photo_'+Date.now()+'.jpg').then(function(u){photoUrl=u;$('qkInfo')&&($('qkInfo').textContent=driveOn()?'照片已上傳到雲端硬碟。':'照片已加入。');});
+      });
+    };
+    function doSave(again){
+      var brand=$('qkBrand').value.trim(),size=$('qkSize').value.trim(),nm=$('qkName').value.trim();
+      if(!brand&&!nm&&!photoP){$('qkInfo').textContent='至少填品牌、名稱或選一張照片。';return;}
+      $('qkOk').disabled=true;$('qkMore').disabled=true;
+      Promise.resolve(photoP).then(function(){
+        var st=$('qkStatus').value;
+        var rec={id:uid(),brand:brand,name:nm||((brand+' '+size).trim()||'未命名'),size:size,cat:'',tags:[],buy:Number($('qkBuy').value)||0,sell:0,status:st,cond:'全新未下水',official:'',photo:photoUrl,note:'',shape:'top',color:'#2a7f90',plan:Number($('qkPlan').value)||0,eta:'',buyDate:'',soldDate:'',lentTo:'',prevCond:'',prevStatus:'',listDate:''};
+        stampList(rec);snap();state.items.push(rec);save();
+        quickLast={brand:brand,size:size,status:st};
+        renderAll();
+        if(again){closeModal();openQuick();toast('已新增「'+rec.name+'」，繼續下一件');}
+        else{closeModal();undoToast('已新增「'+rec.name+'」');}
+      });
+    }
+    $('qkOk').onclick=function(){doSave(false)};$('qkMore').onclick=function(){doSave(true)};
+    setTimeout(function(){var e=$('qkBrand');if(e&&!e.value)e.focus()},30);
+  }
+  function openBulkPhotos(){
+    var files=[];
+    openModal('批次上傳照片',
+      '<p class="hint" style="grid-column:1/-1;margin:0">一次選很多張照片。檔名含編號（例如 <b>A00012.jpg</b>）會自動對到那件衣服；檔名含「官方」或 official 的放到官方圖，其他放到實拍圖。對不到的可以自己選，或略過。</p>'+
+      '<label class="f full">選擇照片（可多選）<input type="file" id="bpFiles" accept="image/*" multiple></label><div id="bpList" style="grid-column:1/-1"></div>'+
+      '<p class="hint" id="bpInfo" style="grid-column:1/-1;margin:0"></p>',
+      '<button class="btn" type="button" id="bpX">取消</button><button class="btn primary" type="button" id="bpGo" disabled>開始上傳</button>');
+    $('bpX').onclick=closeModal;
+    var opts=state.items.map(function(i){return '<option value="'+esc(i.id)+'">'+esc((i.id||'')+' '+(i.brand||'')+' '+(i.name||''))+'</option>'}).join('');
+    function guess(f){
+      var base=f.name.replace(/\.[^.]+$/,''),m=/A\d{3,6}/i.exec(base),hit=null;
+      if(m){var id=m[0].toUpperCase();hit=state.items.filter(function(i){return String(i.id).toUpperCase()===id})[0]||null;}
+      if(!hit){var c=state.items.filter(function(i){return i.name&&i.name.length>=3&&base.indexOf(i.name)>=0});if(c.length===1)hit=c[0];}
+      return {item:hit,type:/官方|official/i.test(base)?'official':'photo'};
+    }
+    $('bpFiles').onchange=function(){
+      files=Array.prototype.slice.call(this.files).map(function(f){var g=guess(f);return {f:f,id:g.item?g.item.id:'',type:g.type}});
+      var ok=files.filter(function(x){return x.id}).length;
+      $('bpList').innerHTML='<table style="width:100%;font-size:13px;border-collapse:collapse">'+files.map(function(x,i){
+        return '<tr><td style="padding:4px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(x.f.name)+'</td><td style="padding:4px"><select data-bi="'+i+'" data-k="id" style="max-width:190px"><option value="">（略過）</option>'+opts.replace('value="'+esc(x.id)+'"','value="'+esc(x.id)+'" selected')+'</select></td><td style="padding:4px"><select data-bi="'+i+'" data-k="type"><option value="photo"'+(x.type==='photo'?' selected':'')+'>實拍圖</option><option value="official"'+(x.type==='official'?' selected':'')+'>官方圖</option></select></td></tr>';
+      }).join('')+'</table>';
+      $('bpInfo').textContent='共 '+files.length+' 張，自動對到 '+ok+' 張；其餘請在右邊選擇，不選就會略過。';
+      $('bpGo').disabled=!files.length;
+    };
+    $('bpList').onchange=function(e){var s=e.target;if(!s.dataset.bi)return;files[Number(s.dataset.bi)][s.dataset.k]=s.value;};
+    $('bpGo').onclick=function(){
+      var todo=files.filter(function(x){return x.id});
+      if(!todo.length){$('bpInfo').textContent='沒有要上傳的照片，請先選擇對應的衣服。';return;}
+      $('bpGo').disabled=true;$('bpX').disabled=true;snap();
+      var n=0,fail=0;
+      todo.reduce(function(p,x){
+        return p.then(function(){
+          $('bpInfo').textContent='上傳中 '+(n+fail+1)+' / '+todo.length+'：'+x.f.name;
+          return new Promise(function(res){
+            readImage(x.f,1200,function(d){
+              if(!d){fail++;return res();}
+              storePhoto(d,x.type+'_'+x.id+'_'+Date.now()+'.jpg').then(function(u){
+                var it=state.items.filter(function(i){return i.id===x.id})[0];
+                if(it){it[x.type]=u;n++;}else fail++;
+                res();
+              });
+            });
+          });
+        });
+      },Promise.resolve()).then(function(){
+        save();renderAll();closeModal();
+        undoToast('已加入 '+n+' 張照片'+(fail?'，'+fail+' 張失敗':''));
+      });
     };
   }
   /* ---------- 照片編輯（裁切／旋轉／亮度）---------- */
@@ -2292,7 +2404,7 @@ body.pub .pic{position:relative}
       '<p class="hint" style="grid-column:1/-1;margin:0">把這條連結傳給別人，對方打開只會看到：<b>現有件數、品牌、尺寸、照片、衣況、預計售價</b>。購入價、已付款、預購待付、售出收入、名稱、標籤、備註、借給誰、已售出與預購中的衣服都看不到。對方按「編輯」並輸入密碼，才會看到完整資料。</p>'+
       '<textarea id="shLink" rows="4" readonly style="grid-column:1/-1;width:100%;font-size:11px" aria-label="公開連結">'+esc(link)+'</textarea>'+
       '<button class="btn sm" type="button" id="shCopy">複製連結</button>'+
-      '<p class="hint" style="grid-column:1/-1;margin:0">需要先把 Apps Script 換成新版（版本 public-3），並重新部署成新版本，公開連結才讀得到資料。連結內有你的 Apps Script 網址，請搭配「不容易猜到的密碼」使用。</p>',
+      '<p class="hint" style="grid-column:1/-1;margin:0">需要先把 Apps Script 換成新版（版本 public-4），並重新部署成新版本，公開連結才讀得到資料。連結內有你的 Apps Script 網址，請搭配「不容易猜到的密碼」使用。</p>',
       '<button class="btn primary" type="button" id="shDone">完成</button>');
     $('shDone').onclick=closeModal;
     $('shCopy').onclick=function(){var ta=$('shLink');ta.select();if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(ta.value).then(function(){toast('已複製連結')},function(){toast('請手動複製已選取的文字')});else toast('請手動複製已選取的文字')};
@@ -2495,7 +2607,9 @@ body.pub .pic{position:relative}
   $('btnStats').onclick=openStats;
   $('btnSync').onclick=openSync;
   $('btnSyncNow').onclick=syncNow;
-  $('fab').onclick=function(){$('btnAdd').click()};
+  $('fab').onclick=openQuick;
+  $('btnQuick').onclick=openQuick;
+  $('btnBulkPhoto').onclick=openBulkPhotos;
   PUB=pubParse();
   if(!PUB)applyHashCfg();
   setupAppMeta();
