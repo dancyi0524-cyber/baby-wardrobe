@@ -984,13 +984,15 @@ body.pub .pic{position:relative}
     });
     return best;
   }
+  /* 試算表的圖片欄是空白、但網頁已有照片網址時，保留網頁的並補寫回試算表（避免之前『照片上傳了卻沒同步』時，被空白欄位蓋掉） */
+  var imgKept=false;
   function applySet(ex,n,full){
     var keys=(full&&n._cols)?n._cols.slice():n._set||['brand','size','cat','tags','buy','sell','status','cond','official','photo','note','plan','eta','buyDate','soldDate','lentTo','listDate'];
     var oS=ex.status,oL=String(ex.lentTo||'').trim();
     keys.forEach(function(k){
       if(k==='forSale'){if(n.status==='待售出'&&keys.indexOf('status')<0)ex.status='待售出';return;}
       if(k==='id'||(k==='name'&&!full))return;
-      if(full&&(k==='official'||k==='photo')&&!n[k]&&String(ex[k]||'').indexOf('data:')===0)return;
+      if(full&&(k==='official'||k==='photo')&&!n[k]&&ex[k]){imgKept=true;return;}
       if(k==='status'&&ex.status==='已售出'&&n.status!=='已售出'&&keys.indexOf('soldDate')<0)ex.soldDate='';
       if(k==='cond'){
         if(n.cond==='借出中'){if(ex.status==='已到貨'||ex.status==='待售出'){ex.prevStatus=ex.status;ex.status='借出中';}return;}
@@ -1749,9 +1751,9 @@ body.pub .pic{position:relative}
       }
       var before=JSON.stringify(state.items),res=applySheetRows(j.rows,false);
       var changed=before!==JSON.stringify(state.items);
-      c.hash=j.hash||'';c.conflict=false;c.err='';c.dirty=false;c.last=Date.now();c.lastResult=changed?'已更新（更新 '+res.upd+'、新增 '+res.add+'、移除 '+res.del+'）':'已套用，內容相同';syncSet(c);
+      var kept=imgKept;imgKept=false;c.hash=j.hash||'';c.conflict=false;c.err='';c.dirty=kept;c.last=Date.now();c.lastResult=changed?'已更新（更新 '+res.upd+'、新增 '+res.add+'、移除 '+res.del+'）':'已套用，內容相同';syncSet(c);
       noSync++;try{save()}finally{noSync--}
-      renderAll();updateSyncBtn();res.changed=changed;return res;
+      renderAll();updateSyncBtn();res.changed=changed;if(kept)scheduleSync();return res;
     }).catch(function(e){
       var c2=syncCfg();c2.lastCheck=Date.now();
       c2.err='讀取失敗：'+(e&&e.message==='密碼不符'?'密碼不符':(e&&e.message==='試算表回應錯誤'?e.message:'連線失敗，請確認部署網址、存取權是「所有人」'));
