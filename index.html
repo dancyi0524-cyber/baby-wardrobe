@@ -929,7 +929,7 @@ body.pub .pic{position:relative}
     };
   }
 
-  var CSV_COLS=['品牌','名稱','尺寸','分類','標籤','購入價','售出價','到貨狀況','衣況','官方圖','實拍圖','備註','預計售價','預計到貨日','可販售','購入日期','售出日期','借給誰','編號'];
+  var CSV_COLS=['品牌','名稱','尺寸','分類','標籤','購入價','售出價','到貨狀況','衣況','官方圖','實拍圖','備註','預計售價','預計到貨日','可販售','購入日期','售出日期','借給誰','編號','上架日期'];
   function parseCsv(t){
     var rows=[],r=[],f='',q=false,i=0;
     t=t.replace(/^﻿/,'');
@@ -1089,7 +1089,7 @@ body.pub .pic{position:relative}
     state.items.forEach(function(i){
       var img=function(u){return u&&u.indexOf('data:')===0?'':u};
       var sell=i.status==='已售出'?soldPrice(i):(Number(i.sell)||'');
-      lines.push([i.brand,i.name,i.size,i.cat,(i.tags||[]).join('|'),i.buy,sell,i.status,i.cond,img(i.official),img(i.photo),i.note,i.plan||'',i.eta||'',i.status==='待售出'?'是':'',i.buyDate||'',i.soldDate||'',i.lentTo||'',i.id||''].map(csvCell).join(','));
+      lines.push([i.brand,i.name,i.size,i.cat,(i.tags||[]).join('|'),i.buy,sell,i.status,i.cond,img(i.official),img(i.photo),i.note,i.plan||'',i.eta||'',i.status==='待售出'?'是':'',i.buyDate||'',i.soldDate||'',i.lentTo||'',i.id||'',i.listDate||''].map(csvCell).join(','));
     });
     return lines.join('\r\n');
   }
@@ -1600,6 +1600,12 @@ body.pub .pic{position:relative}
   }
   /* ---------- 同步到 Google 試算表 ---------- */
   var SYNC_KEY='babyWardrobe.sync',syncTimer=null,lastPull=0,noSync=0;
+  /* 所有對 Apps Script 的請求都有逾時，網路卡住時會中止並顯示失敗，而不是一直轉圈 */
+  function fetchT(url,opts,ms){
+    opts=opts||{};var ctl=typeof AbortController==='function'?new AbortController():null,tm=null;
+    if(ctl){opts=Object.assign({},opts,{signal:ctl.signal});tm=setTimeout(function(){ctl.abort()},ms||45000);}
+    return fetch(url,opts).then(function(r){clearTimeout(tm);return r},function(e){clearTimeout(tm);throw e});
+  }
   function syncCfg(){
     var d={url:'',token:'',mode:'off',drive:false,hash:'',dirty:false,conflict:false,last:0,err:''};
     try{var o=JSON.parse(localStorage.getItem(SYNC_KEY)||'{}');d=Object.assign(d,o);}catch(e){}
@@ -1638,7 +1644,7 @@ body.pub .pic{position:relative}
       syncDone(r&&r.changed?'已從試算表更新 ✓':'已是最新 ✓');
     }).catch(syncFail)};
     if(!c.hash&&state.items.length){
-      fetch(c.url+(c.url.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(c.token)+'&_='+Date.now()).then(function(r){return r.json()}).then(function(j){
+      fetchT(c.url+(c.url.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(c.token)+'&_='+Date.now()).then(function(r){return r.json()}).then(function(j){
         if(!j||!j.ok)throw new Error(syncErr(j));
         if(j.rows&&j.rows.length>1){syncBusy=false;if(n)n.classList.remove('busy');syncChoose(true);}else go();
       }).catch(function(e){var c2=syncCfg();c2.err=(e&&e.message==='密碼不符')?'密碼不符':'連線失敗，請確認網址與密碼';syncSet(c2);updateSyncBtn();syncFail(e);});
@@ -1656,11 +1662,11 @@ body.pub .pic{position:relative}
     });
     return rows;
   }
-  function syncErr(j){return j&&j.error==='token'?'密碼不符':'試算表回應錯誤'}
+  function syncErr(j){return j&&j.error==='token'?'密碼不符':j&&j.error==='busy'?'試算表正被另一台裝置寫入，請稍後再試':'試算表回應錯誤'}
   function syncUpload(force){
     var c=syncCfg();
     if(!c.url)return Promise.reject(new Error('no-url'));
-    return fetch(c.url,{method:'POST',body:JSON.stringify({token:c.token,rows:syncRows(),baseHash:c.hash||'',force:!!force})})
+    return fetchT(c.url,{method:'POST',body:JSON.stringify({token:c.token,rows:syncRows(),baseHash:c.hash||'',force:!!force})})
       .then(function(r){return r.json()})
       .then(function(j){
         c=syncCfg();
@@ -1669,7 +1675,7 @@ body.pub .pic{position:relative}
         c.last=Date.now();c.err='';c.hash=j.hash||'';c.dirty=false;c.conflict=false;syncSet(c);markBackup();updateSyncBtn();return j;
       })
       .catch(function(e){
-        if(!e||!e.conflict){c=syncCfg();c.err=(e&&e.message==='密碼不符')?'密碼不符':(e&&e.message==='試算表回應錯誤'?e.message:'連線失敗，請檢查網址與網路');syncSet(c);updateSyncBtn();}
+        if(!e||!e.conflict){c=syncCfg();c.err=(e&&e.message==='密碼不符')?'密碼不符':(e&&/^試算表/.test(e.message||'')?e.message:'連線失敗，請檢查網址與網路');syncSet(c);updateSyncBtn();}
         throw e;
       });
   }
@@ -1733,7 +1739,7 @@ body.pub .pic{position:relative}
   }  function syncPull(silent){
     var c=syncCfg();
     if(!c.url)return Promise.reject(new Error('no-url'));
-    return fetch(c.url+(c.url.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(c.token)+'&_='+Date.now()).then(function(r){return r.json()}).then(function(j){
+    return fetchT(c.url+(c.url.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(c.token)+'&_='+Date.now()).then(function(r){return r.json()}).then(function(j){
       if(!j||!j.ok)throw new Error(syncErr(j));
       c=syncCfg();lastPull=Date.now();c.lastCheck=lastPull;
       if(!j.rows||j.rows.length<2){c.hash=j.hash||'';c.lastResult='試算表是空的';c.err='';syncSet(c);updateSyncBtn();return {empty:true};}
@@ -1767,7 +1773,7 @@ body.pub .pic{position:relative}
   function uploadPhoto(data,name){
     var c=syncCfg(),m=/^data:([^;]+);base64,(.*)$/.exec(data||'');
     if(!c.url||!m)return Promise.reject(new Error('bad'));
-    return fetch(c.url,{method:'POST',body:JSON.stringify({token:c.token,action:'upload',name:name||('photo_'+Date.now()+'.jpg'),mime:m[1],data:m[2]})})
+    return fetchT(c.url,{method:'POST',body:JSON.stringify({token:c.token,action:'upload',name:name||('photo_'+Date.now()+'.jpg'),mime:m[1],data:m[2]})})
       .then(function(r){return r.text()})
       .then(function(t){
         var j;try{j=JSON.parse(t)}catch(e){var ne=new Error('NOTJSON');ne.raw=String(t).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,160);throw ne;}
@@ -1785,7 +1791,7 @@ body.pub .pic{position:relative}
   function driveTest(info){
     var c=syncCfg();if(!c.url){info('請先貼上網頁應用程式網址並儲存設定');return;}
     info('檢查腳本版本…');
-    fetch(c.url+(c.url.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(c.token)+'&_='+Date.now()).then(function(r){return r.json()}).then(function(j){
+    fetchT(c.url+(c.url.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(c.token)+'&_='+Date.now()).then(function(r){return r.json()}).then(function(j){
       if(!j||!j.ok)throw new Error(j&&j.error==='token'?'token':'check');
       if(!/^(drive-[23]|public-\d+)$/.test(j.ver||'')){info('檢查結果：這個網址（腳本版本：'+(j.ver||'沒有版本標記')+'，需要 drive-2 或 drive-3）（結尾 …'+c.url.slice(-16)+'）的腳本沒有回傳版本標記。腳本回傳的欄位：'+Object.keys(j).join(', ')+'。請到 Apps Script「部署」→「管理部署作業」，看你要用的那個部署的網址結尾是不是和這裡一樣；不一樣的話，把正確網址貼進來。');return;}
       driveTest2(info);
@@ -1821,7 +1827,7 @@ body.pub .pic{position:relative}
       var job=driveQ.shift();driveRun++;
       (function(j){
         var c=syncCfg();
-        fetch(c.url,{method:'POST',body:JSON.stringify({token:c.token,action:'image',id:j.id})}).then(function(r){return r.json()}).then(function(res){
+        fetchT(c.url,{method:'POST',body:JSON.stringify({token:c.token,action:'image',id:j.id})}).then(function(r){return r.json()}).then(function(res){
           if(res&&res.ok&&res.data){driveCache[j.id]=res.data;idbSet(j.id,res.data);j.cb(res.data)}else j.cb(null);
         }).catch(function(){j.cb(null)}).then(function(){driveRun--;driveNext()});
       })(job);
@@ -1874,7 +1880,7 @@ body.pub .pic{position:relative}
     "const SHEET_ID = '請貼上你的試算表ID';",
     "const SHEET = '請改成你的工作表名稱';",
     "const FOLDER_ID = '';  // 照片資料夾 ID；留空會自動建立「寶寶衣櫃照片」資料夾（照片維持私人，不會公開）",
-    "const VERSION = 'public-4';  // 版本標記，網頁用來確認你部署的是新版",
+    "const VERSION = 'public-5';  // 版本標記，網頁用來確認你部署的是新版",
     "function out(o){return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);}",
     "function getSheet(create){const ss = SpreadsheetApp.openById(SHEET_ID); return ss.getSheetByName(SHEET) || (create ? ss.insertSheet(SHEET) : null);}",
     "function readAll(sh){return sh ? sh.getDataRange().getValues() : [];}",
@@ -1929,7 +1935,16 @@ body.pub .pic{position:relative}
     "  });",
     "  return out;",
     "}",
+    "// 同一時間只允許一個寫入（避免手機與電腦同時上傳互相覆蓋）；任何例外都回傳 JSON，前端才能顯示正確的錯誤",
     "function doPost(e){",
+    "  const lock = LockService.getScriptLock();",
+    "  try { lock.waitLock(20000); } catch (err) { return out({ok:false, error:'busy'}); }",
+    "  try { return doPostInner(e); } catch (err) { return out({ok:false, error:'server', msg:String(err && err.message || err)}); } finally { lock.releaseLock(); }",
+    "}",
+    "function doGet(e){",
+    "  try { return doGetInner(e); } catch (err) { return out({ok:false, error:'server', msg:String(err && err.message || err)}); }",
+    "}",
+    "function doPostInner(e){",
     "  const d = JSON.parse(e.postData.contents);",
     "  if (d.token !== SECRET) return out({ok:false, error:'token'});",
     "  if (d.action === 'upload') {",
@@ -1955,7 +1970,7 @@ body.pub .pic{position:relative}
     "  SpreadsheetApp.flush();",
     "  return out({ok:true, count:n-1, hash:hashOf(readAll(sh))});",
     "}",
-    "function doGet(e){",
+    "function doGetInner(e){",
     "  const p = e.parameter || {};",
     "  if (p.mode === 'public') { const items = publicItems(readAll(getSheet(false))); return out({ok:true, count:items.length, items:items, ver:VERSION}); }",
     "  if (p.mode === 'pubimg') {",
@@ -2012,7 +2027,7 @@ body.pub .pic{position:relative}
       var x=cfgFromForm();syncSet(x);
       if(!x.url){info('請先貼上網頁應用程式網址');return;}
       info('連線中…');
-      fetch(x.url+(x.url.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(x.token)+'&_='+Date.now()).then(function(r){return r.json()}).then(function(j){
+      fetchT(x.url+(x.url.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(x.token)+'&_='+Date.now()).then(function(r){return r.json()}).then(function(j){
         if(!j||!j.ok)throw new Error(syncErr(j));
         info('連線成功。試算表目前有 '+Math.max(0,(j.rows||[]).length-1)+' 列資料。'+(/^public-/.test(j.ver||'')?'腳本版本：'+j.ver+'（最新，支援公開分享連結，照片維持私人）。':j.ver==='drive-3'?'腳本版本：drive-3（可用，但不支援公開分享連結，請更新）。':j.ver==='drive-2'?'腳本版本：drive-2（可用；新上傳的照片會是「知道連結可檢視」）。':'腳本版本：'+(j.ver||'無')+'，太舊了，請重新複製程式碼並部署新版本。')+'｜目前使用的網址結尾：…'+x.url.slice(-16)+'｜腳本回傳的欄位：'+Object.keys(j).join(', '));
       }).catch(function(e){info('連線失敗：'+(e&&e.message==='密碼不符'?'密碼不符':'請檢查網址是否為 /exec 結尾、部署存取權是否為「所有人」；若剛更新過程式碼，要重新部署新版本'))});
@@ -2039,7 +2054,7 @@ body.pub .pic{position:relative}
         toast('已從試算表讀入：更新 '+pulled.res.upd+'、新增 '+pulled.res.add+'、移除 '+pulled.res.del);return;
       }
       info('讀取中…');
-      fetch(x.url+(x.url.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(x.token)+'&_='+Date.now()).then(function(r){return r.json()}).then(function(j){
+      fetchT(x.url+(x.url.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(x.token)+'&_='+Date.now()).then(function(r){return r.json()}).then(function(j){
         if(!j||!j.ok)throw new Error(syncErr(j));
         if(!j.rows||j.rows.length<2)throw new Error('試算表的「衣櫃」工作表是空的，請先「立即上傳」');
         var res=applySheetRows(j.rows,true),sd=sheetDiff(j.rows);pulled={rows:j.rows,hash:j.hash,res:res};
@@ -2263,6 +2278,7 @@ body.pub .pic{position:relative}
     var m=/[#&]cfg=([A-Za-z0-9_\-]+)/.exec(location.hash||'');if(!m)return;
     try{
       var o=b64dec(m[1]);if(!o||!o.u)return;
+      if(!isGasUrl(o.u)){try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}return;}
       var c=syncCfg(),mode=o.m||'both';
       if(c.url!==o.u||c.token!==(o.t||'')||c.mode!==mode||c.drive!==!!o.d){c.url=o.u;c.token=o.t||'';c.mode=mode;c.drive=!!o.d;syncSet(c);}
     }catch(e){}
@@ -2291,7 +2307,7 @@ body.pub .pic{position:relative}
   function applyCfgText(text){
     var m=/cfg=([A-Za-z0-9_\-]+)/.exec(text||'');if(!m)return false;
     try{
-      var o=b64dec(m[1]);if(!o||!o.u)return false;
+      var o=b64dec(m[1]);if(!o||!o.u||!isGasUrl(o.u))return false;
       var c=syncCfg();c.url=o.u;c.token=o.t||'';c.mode=o.m||'both';c.drive=!!o.d;syncSet(c);return o;
     }catch(e){return false}
   }
@@ -2301,13 +2317,15 @@ body.pub .pic{position:relative}
   }
   /* ---------- 公開檢視（對外分享）---------- */
   var PUB=null,pubItems=[],pubQ=[],pubRun=0;
-  function pubParse(){var m=/[#&]pub=([A-Za-z0-9_\-]+)/.exec(location.hash||'');if(!m)return null;try{var o=b64dec(m[1]);return o&&o.u?o:null}catch(e){return null}}
+  /* 只信任 Google Apps Script 官方網址（或本機開發網址）：避免被人用假連結把密碼或資料導向別的網站 */
+  function isGasUrl(u){return /^https:\/\/script\.google\.com\/(a\/macros\/[\w.\-]+\/|macros\/)s\/[\w\-]+\/exec$/.test(String(u||''))||/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(String(u||''))}
+  function pubParse(){var m=/[#&]pub=([A-Za-z0-9_\-]+)/.exec(location.hash||'');if(!m)return null;try{var o=b64dec(m[1]);return o&&o.u&&isGasUrl(o.u)?o:null}catch(e){return null}}
   function pubUrl(extra){return PUB.u+(PUB.u.indexOf('?')<0?'?':'&')+extra}
   function pubNext(){
     while(pubRun<3&&pubQ.length){
       var job=pubQ.shift();pubRun++;
       (function(j){
-        fetch(pubUrl('mode=pubimg&id='+encodeURIComponent(j.id)+'&_='+Date.now())).then(function(r){return r.json()}).then(function(res){
+        fetchT(pubUrl('mode=pubimg&id='+encodeURIComponent(j.id)+'&_='+Date.now())).then(function(r){return r.json()}).then(function(res){
           if(res&&res.ok&&res.data){driveCache[j.id]=res.data;idbSet(j.id,res.data);j.cb(res.data)}else j.cb(null);
         }).catch(function(){j.cb(null)}).then(function(){pubRun--;pubNext()});
       })(job);
@@ -2362,7 +2380,7 @@ body.pub .pic{position:relative}
   }
   function pubLoad(){
     try{var c=JSON.parse(localStorage.getItem('babyWardrobe.pubcache')||'null');if(c&&c.u===PUB.u&&c.items){pubItems=c.items;pubFill();pubRender();}}catch(e){}
-    fetch(pubUrl('mode=public&_='+Date.now())).then(function(r){return r.json()}).then(function(j){
+    fetchT(pubUrl('mode=public&_='+Date.now())).then(function(r){return r.json()}).then(function(j){
       if(!j||!j.ok||!j.items)throw new Error(j&&j.error==='token'?'old':'bad');
       pubItems=j.items;try{localStorage.setItem('babyWardrobe.pubcache',JSON.stringify({u:PUB.u,items:pubItems}))}catch(e){}
       pubFill();pubRender();
@@ -2382,7 +2400,7 @@ body.pub .pic{position:relative}
     $('pubPwNo').onclick=closeModal;
     function go(){
       var pw=$('pubPw').value;if(!pw)return;$('pubPwInfo').textContent='確認中…';
-      fetch(pubUrl('token='+encodeURIComponent(pw)+'&_='+Date.now())).then(function(r){return r.json()}).then(function(j){
+      fetchT(pubUrl('token='+encodeURIComponent(pw)+'&_='+Date.now())).then(function(r){return r.json()}).then(function(j){
         if(j&&j.ok)pubUnlock(pw);else $('pubPwInfo').textContent='密碼不正確。';
       }).catch(function(){$('pubPwInfo').textContent='連線失敗，請稍後再試。'});
     }
@@ -2405,7 +2423,7 @@ body.pub .pic{position:relative}
       '<p class="hint" style="grid-column:1/-1;margin:0">把這條連結傳給別人，對方打開只會看到：<b>現有件數、品牌、尺寸、照片、衣況、預計售價</b>。購入價、已付款、預購待付、售出收入、名稱、標籤、備註、借給誰、已售出與預購中的衣服都看不到。對方按「編輯」並輸入密碼，才會看到完整資料。</p>'+
       '<textarea id="shLink" rows="4" readonly style="grid-column:1/-1;width:100%;font-size:11px" aria-label="公開連結">'+esc(link)+'</textarea>'+
       '<button class="btn sm" type="button" id="shCopy">複製連結</button>'+
-      '<p class="hint" style="grid-column:1/-1;margin:0">需要先把 Apps Script 換成新版（版本 public-4），並重新部署成新版本，公開連結才讀得到資料。連結內有你的 Apps Script 網址，請搭配「不容易猜到的密碼」使用。</p>',
+      '<p class="hint" style="grid-column:1/-1;margin:0">需要先把 Apps Script 換成新版（版本 public-5），並重新部署成新版本，公開連結才讀得到資料。連結內有你的 Apps Script 網址，請搭配「不容易猜到的密碼」使用。</p>',
       '<button class="btn primary" type="button" id="shDone">完成</button>');
     $('shDone').onclick=closeModal;
     $('shCopy').onclick=function(){var ta=$('shLink');ta.select();if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(ta.value).then(function(){toast('已複製連結')},function(){toast('請手動複製已選取的文字')});else toast('請手動複製已選取的文字')};
