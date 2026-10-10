@@ -1387,8 +1387,8 @@ body.pub .pic{position:relative}
     c.textAlign='left';
     var maxW=W-112-pw-40,y=top+Math.round(bar*.27);
     if(P.brand){
-      c.fillStyle=gray;c.font='400 32px '+PO_FF;
-      if('letterSpacing' in c)c.letterSpacing='3px';
+      c.fillStyle=ink;poFit(c,P.brand,'800',50,maxW,28);
+      if('letterSpacing' in c)c.letterSpacing='2px';
       c.fillText(P.brand,56,y);
       if('letterSpacing' in c)c.letterSpacing='0px';
     }
@@ -1403,9 +1403,9 @@ body.pub .pic{position:relative}
     c.textBaseline='alphabetic';
     var g=c.createLinearGradient(0,H-440,0,H);g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,0,.7)');
     c.fillStyle=g;c.fillRect(0,H-440,W,440);
-    c.fillStyle='#ffffff';c.font='400 32px '+PO_FF;
-    if('letterSpacing' in c)c.letterSpacing='3px';
-    c.fillText(P.brand||'',56,H-230);
+    c.fillStyle='#ffffff';poFit(c,P.brand||'','800',54,W-112,30);
+    if('letterSpacing' in c)c.letterSpacing='2px';
+    c.fillText(P.brand||'',56,H-232);
     if('letterSpacing' in c)c.letterSpacing='0px';
     c.font='500 62px '+PO_FF;
     poWrap(c,P.name||'',W-112,2).forEach(function(l,k){c.fillText(l,56,H-160+k*70)});
