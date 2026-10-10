@@ -1604,6 +1604,7 @@ body.pub .pic{position:relative}
     var d={url:'',token:'',mode:'off',drive:false,hash:'',dirty:false,conflict:false,last:0,err:''};
     try{var o=JSON.parse(localStorage.getItem(SYNC_KEY)||'{}');d=Object.assign(d,o);}catch(e){}
     d.mode=d.url?(d.paused?'off':'both'):'off';
+    if(d.url)d.drive=true;
     return d;
   }
   function syncSet(c){try{localStorage.setItem(SYNC_KEY,JSON.stringify(c))}catch(e){}}
