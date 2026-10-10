@@ -1804,14 +1804,18 @@ body.pub .pic{position:relative}
     uploadPhoto(png,'寶寶衣櫃_測試.png').then(function(url){info('成功！測試圖片已存到雲端硬碟：'+url+'（可到「寶寶衣櫃照片」資料夾刪除這張測試圖）')},function(e){info('失敗：'+driveErrText(e))});
   }
   var idbDb=null,driveQ=[],driveRun=0;
+  /* IndexedDB 若被其他分頁卡住（例如另一個分頁正在刪除或升級資料庫），2 秒後放棄快取，改直接向雲端讀取照片，不讓照片一直空白 */
   function idbOpen(cb){
     if(idbDb)return cb(idbDb);
+    var fired=false,fin=function(d){if(fired)return;fired=true;cb(d)};
     try{
       var rq=indexedDB.open('babyWardrobeImg',1);
       rq.onupgradeneeded=function(){rq.result.createObjectStore('img')};
-      rq.onsuccess=function(){idbDb=rq.result;cb(idbDb)};
-      rq.onerror=function(){cb(null)};
-    }catch(e){cb(null)}
+      rq.onsuccess=function(){idbDb=rq.result;fin(idbDb)};
+      rq.onerror=function(){fin(null)};
+      rq.onblocked=function(){fin(null)};
+      setTimeout(function(){fin(null)},2000);
+    }catch(e){fin(null)}
   }
   function idbGet(id,cb){
     idbOpen(function(db){
